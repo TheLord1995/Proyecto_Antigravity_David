@@ -1,6 +1,7 @@
 # ANTIGRAVITY_SPACE_BUNDLE: Contexto Consolidado del Proyecto
 
 Este documento constituye la fuente única de verdad y contexto para **Perplexity Space** sobre el **Proyecto Antigravity**. Contiene la identidad, el estado actual de implementación, decisiones arquitectónicas fundamentales, la estructura de seguridad activa y las directrices de asistencia técnica para la interacción con la inteligencia artificial.
+*(Última actualización: 2026-06-02)*
 
 ---
 
@@ -19,12 +20,14 @@ Este documento constituye la fuente única de verdad y contexto para **Perplexit
 
 ## 2. Estado Actual del Proyecto
 
-* **Versión Core Documentada:** `1.3.0` (registrada en `docs/management/PROJECT_STATUS.md`, ampliada con el cierre de las fases 4.2B y 4.3).
+* **Versión Core Documentada:** `1.4.0` (registrada en `docs/management/PROJECT_STATUS.md`, ampliada con el cierre de las fases 4.2B, 4.3 y 4.4).
 * **Fases Completadas:**
   * **Fase 4.2B — Monte Carlo & Risk of Ruin (Completada):** Implementación del motor matemático de remuestreo (Bootstrap y Shuffle) para evaluar la probabilidad de ruina y la solidez estadística del drawdown ante variaciones de racha. Integrada la Regla D4 que degrada clasificaciones a `OBSERVATION` si el análisis arroja `low_confidence = True`.
   * **Fase 4.3 — AI Validator Design (Completada):** Diseño conceptual completo de la capa de inteligencia artificial auxiliar detallada en una arquitectura por adaptadores.
+  * **Fase 4.4 — AI Validator Contracts (Completada):** Implementación íntegra de contratos de datos Pydantic, la clase base abstracta `AIValidatorAdapter` y el `MockAIValidator` para validaciones offline estáticas.
 * **Fase Actual y Próxima Recomendada:**
-  * **Fase 4.4 — AI Validator Contracts:** Implementación de contratos de datos Pydantic para el AI Validator y el adaptador inicial `MockAIValidator` para pruebas locales sin red.
+  * **Fase 4.4B — RemoteAPIValidator:** Integración con proveedores reales mediante un adaptador. (Congelado para entrega académica).
+  * **Fase 4.5 — Approval Layer:** Interfaz de decisión humana unificada.
 
 ---
 
@@ -44,15 +47,15 @@ El ecosistema cuenta con los siguientes módulos completamente funcionales y val
 11. **SHA-256 Traceability:** Firma criptográfica del reporte crudo HTML para asegurar trazabilidad e inmutabilidad de la auditoría.
 12. **Metrics Engine determinista:** Recálculo offline e independiente de métricas básicas y avanzadas (Sortino Ratio, Expectancy, Max Daily Loss, rachas consecutivas).
 13. **Monte Carlo & Risk of Ruin:** Motor de simulaciones estadísticas de remuestreo y cálculo de la probabilidad de ruina en base a rachas.
-14. **AI Validator Design:** Especificación de la arquitectura por adaptadores del AI Validator.
+14. **AI Validator Design & Contracts:** Especificación de la arquitectura por adaptadores del AI Validator, con modelos Pydantic (`AIValidatorInput`, `AIValidatorResult`) y la implementación base offline `MockAIValidator`.
 15. **GitHub y control de versiones:** Repositorio limpio estructurado por módulos aislados.
-16. **pytest:** Suite de pruebas unitarias y de integración automatizadas.
+16. **pytest:** Suite de pruebas unitarias y de integración automatizadas (117 tests auditados y pasando 100%).
 
 ---
 
 ## 4. Última Batería de Tests Conocida
 
-* **Resultado:** `67 tests pasados / 0 fallados` de manera exitosa ejecutando `.venv\Scripts\pytest tests/`.
+* **Resultado:** `117 tests pasados / 0 fallados` de manera exitosa ejecutando `.venv\Scripts\pytest tests/ -v`.
 * **Advertencias (Warnings):** 14 warnings no bloqueantes por la depreciación de `datetime.utcnow()` en validaciones internas de paquetes de dependencias de Pydantic.
 * **Clasificación:** Catalogado como deuda técnica menor; pendiente de resolución al migrar a objetos datetime conscientes del huso horario (`datetime.now(datetime.UTC)`) en la próxima actualización de dependencias de Pydantic.
 
@@ -88,17 +91,16 @@ El pipeline de ingesta, cálculo, validación y control de señales sigue un flu
 
 ## 6. Componentes Pendientes (Roadmap)
 
-1. **AI Validator Contracts (Fase 4.4):** Implementación de los modelos Pydantic `AIValidatorInput` y `AIValidatorResult`.
-2. **MockAIValidator:** Adaptador local offline para testing y desarrollo.
-3. **RemoteAPIValidator:** Conectores de APIs en la nube (OpenRouter, OpenAI, Gemini, Claude, etc.) para producción inicial ágil.
-4. **OllamaRemoteValidator:** Adaptador concebido únicamente en caso de contar con un VPS adecuado en el futuro.
-5. **Telegram Approval Layer:** Bot o canal de comunicación integrado para interacción en vivo y alertas con el operador humano.
-6. **Kill Switch:** Módulo de seguridad para detención instantánea del flujo de señales.
-7. **Paper Trading Sandbox:** Entorno controlado de pruebas en tiempo real con datos de mercado simulados.
-8. **Gatekeeper MT5:** Componente para el control estricto de envío de órdenes y volumen exclusivamente en cuentas demo MetaTrader 5.
-9. **TradingView Integration:** Endpoint receptor de webhooks autenticados de señales.
-10. **n8n auxiliary workflows:** Procesos auxiliares de comunicación fuera de la lógica crítica del backend.
-11. **Demo execution:** Ejecución de operaciones simuladas bajo control.
+1. **RemoteAPIValidator (Fase 4.4B):** Conectores de APIs en la nube (OpenRouter, OpenAI, Gemini, Claude, etc.) para producción inicial ágil.
+2. **Approval Layer (Fase 4.5):** Interfaz unificada de decisión humana para la orquestación y aprobación de señales.
+3. **OllamaRemoteValidator:** Adaptador concebido únicamente en caso de contar con un VPS adecuado en el futuro.
+4. **Telegram Approval Layer:** Bot o canal de comunicación integrado para interacción en vivo y alertas con el operador humano.
+5. **Kill Switch:** Módulo de seguridad para detención instantánea del flujo de señales.
+6. **Paper Trading Sandbox:** Entorno controlado de pruebas en tiempo real con datos de mercado simulados.
+7. **Gatekeeper MT5:** Componente para el control estricto de envío de órdenes y volumen exclusivamente en cuentas demo MetaTrader 5.
+8. **TradingView Integration:** Endpoint receptor de webhooks autenticados de señales.
+9. **n8n auxiliary workflows:** Procesos auxiliares de comunicación fuera de la lógica crítica del backend.
+10. **Demo execution:** Ejecución de operaciones simuladas bajo control.
 
 ---
 

@@ -37,9 +37,9 @@ A continuación se presenta la arquitectura conceptual y técnica detallada del 
 
 ---
 
-## 🎯 Estado Actual (Fase 4.1)
+## 🎯 Estado Actual (Fase 4.4)
 
-El proyecto ha completado con éxito la **Fase 4.1: Backtest Import Layer**, incorporando capacidades robustas de ingesta, normalización, trazabilidad e inspección de reportes de rendimiento histórico exportados desde MetaTrader 5 (MT5).
+El proyecto ha completado con éxito la **Fase 4.4: AI Validator Contracts**, habiendo superado exitosamente las fases de Parsing de Backtests (4.1), Motor de Métricas (4.2), Monte Carlo & Risk of Ruin (4.2B) y el diseño de la arquitectura por adaptadores del validador de IA (4.3 y 4.4).
 
 ### Tabla de Componentes del Sistema
 
@@ -49,24 +49,24 @@ El proyecto ha completado con éxito la **Fase 4.1: Backtest Import Layer**, inc
 | **SQLite Database** | ✅ Implementado | Persistencia segura del log de auditoría de transacciones y evaluaciones. |
 | **Settings & Safety Locks** | ✅ Implementado | Gestión de configuraciones y bloqueos de seguridad estrictos. |
 | **RiskEngine Determinista** | ✅ Implementado | Evaluación de 7 reglas de seguridad a nivel de trade (7/7 tests). |
-| **Strategy Models Pydantic** | ✅ Implementado | Modelización y tipado estricto de estrategias de trading (8/8 tests). |
+| **Strategy Models Pydantic** | ✅ Implementado | Modelización y tipado estricto de estrategias de trading. |
 | **Strategy Validation Framework** | ✅ Implementado | Framework para el ciclo de vida, versionado y evaluación de estrategias. |
-| **BacktestValidator** | ✅ Implementado | Validación formal de consistencia y límites de backtests (10/10 tests). |
+| **BacktestValidator** | ✅ Implementado | Validación formal de consistencia y límites de backtests. |
 | **MT5 HTML Backtest Import Layer** | ✅ Implementado | Capa de importación para reportes de trading de MetaTrader 5. |
-| **Parser de informes MT5 HTML** | ✅ Implementado | Extracción exacta de métricas clave de informes en inglés (29/29 tests). |
-| **SHA-256 Traceability** | ✅ Implementado | Generación de hashes criptográficos para garantizar la integridad física de los reportes. |
-| **Metrics Standard** | ✅ Implementado | Estandarización de métricas de rendimiento (drawdown, ratio Sharpe, profit factor, etc.). |
+| **Parser de informes MT5 HTML** | ✅ Implementado | Extracción exacta de métricas clave de informes en inglés. |
+| **SHA-256 Traceability** | ✅ Implementado | Generación de hashes criptográficos para integridad de reportes. |
+| **Metrics Standard** | ✅ Implementado | Estandarización de métricas de rendimiento. |
+| **Metrics Engine** | ✅ Implementado | Motor de recálculo matemático independiente de métricas clave. |
+| **Monte Carlo & Risk of Ruin** | ✅ Implementado | Motor de simulación estocástica para evaluar probabilidad de ruina. |
+| **AI Validator Contracts** | ✅ Implementado | Arquitectura de adaptadores y contratos de datos para IA. |
 | **GitHub & Control de versiones** | ✅ Implementado | Repositorio estructurado y políticas de branching establecidas. |
 | **Presentación del proyecto** | ✅ Implementado | Material de presentación y diseño de infraestructura en la carpeta `docs/`. |
-| **Metrics Engine** | ⏳ Pendiente | Motor de agregación y cálculo en tiempo real de métricas complejas. |
-| **AI Validator** | ⏳ Pendiente | Validación contextual cualitativa de estrategias mediante LLMs locales. |
-| **Telegram Approval Layer** | ⏳ Pendiente | Canal interactivo de aprobación manual para trades y alertas de validación. |
+| **RemoteAPIValidator** | ⏳ Pendiente | Validación contextual mediante llamadas a APIs remotas (Fase 4.4B). |
+| **Telegram Approval Layer** | ⏳ Pendiente | Canal interactivo de aprobación manual para trades y alertas. |
 | **Gatekeeper MT5** | ⏳ Pendiente | Interfaz para acoplamiento de ejecución con terminales MetaTrader 5. |
 | **Kill Switch** | ⏳ Pendiente | Botón de pánico y detención inmediata de toda actividad de la API. |
 | **Paper Trading Sandbox** | ⏳ Pendiente | Sandbox de simulación y ejecución aislada sin riesgo financiero. |
 | **TradingView Integration** | ⏳ Pendiente | Endpoint de webhook y parseo de alertas estructuradas. |
-| **n8n auxiliary workflows** | ⏳ Pendiente | Automatización y flujos de soporte externos. |
-| **Demo execution** | ⏳ Pendiente | Ejecución de demostración de flujo completo simulado. |
 | **Ejecución Real** | 🔒 BLOQUEADA | Bloqueada de forma estricta por diseño y código en todos los entornos. |
 
 ---
@@ -189,20 +189,23 @@ Debería devolver:
 
 ## 🧪 Ejecutar Tests
 
-El proyecto cuenta con una batería global de **47 tests unitarios y de integración** con un resultado consolidado de **0 fallos**.
+El proyecto cuenta con una batería global de **117 tests unitarios y de integración** con un resultado consolidado de **0 fallos** (100% éxito).
 
 Para ejecutar la batería completa de tests usando `pytest`:
 
 ```bash
-pytest
+pytest tests/ -v
 ```
 
 ### Cobertura del Set de Pruebas
 
-- **RiskEngine**: **7/7** tests que validan estrictamente las políticas de riesgo deterministas.
-- **Strategy Models & Pydantic**: **8/8** tests que garantizan la integridad de la entrada de datos de estrategia.
-- **BacktestValidator**: **10/10** tests que verifican las reglas de aceptación y consistencia de los backtests.
-- **MT5 HTML Parser & Import Layer**: **29/29** tests que garantizan el parseo robusto e integridad de reportes de MetaTrader 5.
+- **RiskEngine**: Verifican estrictamente las políticas de riesgo deterministas.
+- **Strategy Models & Pydantic**: Garantizan la integridad de la entrada de datos de estrategia.
+- **BacktestValidator**: Verifican las reglas de aceptación y consistencia lógica.
+- **Metrics Engine**: Validan cálculos complejos (Expectancy, Sortino, max daily loss).
+- **Monte Carlo**: Simulan iteraciones matemáticas, sembrados aleatorios, y percentiles de caída.
+- **MT5 HTML Parser**: Garantizan el parseo robusto e integridad criptográfica.
+- **AI Validator & Models**: Tests exhaustivos de restricciones de IA, bloqueos de seguridad y adaptadores.
 
 **Comando de ejecución:**
 ```bash
