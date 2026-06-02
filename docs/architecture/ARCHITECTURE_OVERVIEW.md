@@ -98,7 +98,7 @@ TradingView Signal ──▶ n8n (orquestación) ──▶ Gatekeeper API ──
 
 ---
 
-## 5. Módulos Implementados (Fase 2.1 - Completada)
+## 5. Módulos Implementados (Fase 4.4 - Completada)
 
 | Módulo | Estado | Descripción |
 |--------|--------|-------------|
@@ -106,17 +106,22 @@ TradingView Signal ──▶ n8n (orquestación) ──▶ Gatekeeper API ──
 | RiskEngine | ✅ | 7 reglas de riesgo deterministas |
 | SQLite Database | ✅ | Almacenamiento de trades y logs |
 | Settings/Config | ✅ | Validación de seguridad al inicio |
-| Tests Unitarios | ✅ | 7/7 tests pasando |
+| MT5 HTML Parser | ✅ | Ingesta de backtests MT5 (Fase 4.1) |
+| Metrics Engine | ✅ | Recálculo de métricas complejas (Fase 4.2) |
+| Monte Carlo | ✅ | Simulación estocástica y Risk of Ruin (Fase 4.2B) |
+| BacktestValidator | ✅ | Evaluación lógica y D4 (Fase 4.2B) |
+| AI Validator Contracts| ✅ | Adaptadores de validación de IA (Fase 4.4) |
+| Tests Unitarios | ✅ | 117/117 tests pasando |
 
 ---
 
-## 6. Módulos Pendientes (Fase 2.2+)
+## 6. Módulos Pendientes (Fase 4.4B+)
 
 | Módulo | Estado | Prioridad |
 |--------|--------|-----------|
-| T2.2 Kill Switch | ❌ No implementado | Alta |
-| Approval Layer (Telegram) | ❌ No implementado | Alta |
-| AI Validator | ❌ No implementado | Media |
+| RemoteAPIValidator| ❌ No implementado | Alta (4.4B) |
+| Approval Layer (UI) | ❌ No implementado | Alta (4.5) |
+| T2.2 Kill Switch | ❌ No implementado | Media |
 | Gatekeeper Bot | ❌ No implementado | Media |
 | Paper Trading | ❌ No implementado | Media |
 | Integración MT5 | ❌ No implementado | Media |

@@ -1,14 +1,14 @@
-# Diseño Técnico: AI Validator (Fase 4.3)
+# Diseño Técnico: AI Validator (Fase 4.3 & 4.4)
 
-**Estado:** DISEÑO CONCEPTUAL — PENDIENTE DE APROBACIÓN PARA IMPLEMENTACIÓN
+**Estado:** IMPLEMENTACIÓN FASE 4.4 COMPLETADA (Contratos y Mock)
 **Autor:** Director Técnico y Arquitecto Principal del Proyecto Antigravity
 **Fase Predecesora:** 4.2B — Monte Carlo & Risk of Ruin (COMPLETADA, 67/67 tests)
 **Fecha de Creación:** 2026-05-31
-**Última Modificación:** 2026-05-31
+**Última Modificación:** 2026-06-02
 
 > **⚠️ AVISO CRÍTICO DE ALCANCE:**
-> Este documento describe exclusivamente el **diseño conceptual** del AI Validator.
-> No contiene código fuente. No activa ninguna integración. No conecta con ningún modelo externo.
+> Este documento describe el **diseño conceptual** del AI Validator y las interfaces de la Fase 4.4.
+> No contiene código fuente final en este fichero. No activa ninguna integración externa. No conecta con ningún modelo externo en esta fase.
 > No habilita ejecución real de operaciones. `ALLOW_REAL_EXECUTION = False` es invariante absoluta.
 
 ---
@@ -596,15 +596,10 @@ TradingView / n8n
 
 ## 16. Dictamen del Director Técnico
 
-**Resolución:** DISEÑO APROBADO INTERNAMENTE — IMPLEMENTACIÓN PENDIENTE DE AUTORIZACIÓN EXPLÍCITA
-
-**Condición para inicio de Fase 4.4 (Implementación):**
-- Aprobación explícita del Director Técnico.
-- Resolución de las Decisiones Abiertas DA-01 a DA-03 y DA-06 como mínimo obligatorio.
-- Confirmación del modelo/adaptador a usar y entorno de ejecución (Mock local vs API externa vs Ollama VPS).
+**Resolución:** FASE 4.4 COMPLETADA. CONTRATOS, ADAPTADORES Y MOCK IMPLEMENTADOS CON ÉXITO Y TESTEADOS.
 
 **Prioridad de las siguientes subfases propuestas:**
-1. **Fase 4.4** — Implementación del AI Validator con arquitectura de adaptadores.
+1. **Fase 4.4B** — Integración concreta con modelo remoto y persistencia (ai_validation_log).
 2. **Fase 4.5** — Implementación de la Approval Layer (interfaz de decisión humana).
 3. **Fase 4.6** — Integración Signal Parser → AI Validator → RiskEngine → Approval Layer.
 
