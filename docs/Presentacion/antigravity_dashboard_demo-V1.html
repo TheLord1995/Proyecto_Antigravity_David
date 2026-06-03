@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Antigravity Dashboard Demo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,Segoe UI,Arial,sans-serif;background:#070b16;color:#e9eef7;padding:24px}.wrap{max-width:1280px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}.brand h1{font-size:34px;letter-spacing:.5px}.brand p{color:#8fa3bf;margin-top:5px}.badges{display:flex;gap:8px;flex-wrap:wrap}.badge{border:1px solid #24415f;background:#101b2b;border-radius:999px;padding:8px 12px;font-weight:700;font-size:12px}.green{color:#2ce59b}.orange{color:#ffb86b}.red{color:#ff6b6b}.blue{color:#6db7ff}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:linear-gradient(180deg,#111a2b,#0d1423);border:1px solid #1d3048;border-radius:18px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,.25)}.span3{grid-column:span 3}.span4{grid-column:span 4}.span5{grid-column:span 5}.span6{grid-column:span 6}.span7{grid-column:span 7}.span12{grid-column:span 12}.kpi .label{color:#8fa3bf;font-size:13px}.kpi .num{font-size:36px;font-weight:800;margin:8px 0}.kpi .note{font-size:12px;color:#71849d}.status{display:flex;align-items:center;gap:10px}.dot{width:12px;height:12px;border-radius:50%;background:#2ce59b;box-shadow:0 0 16px #2ce59b}.dot.redbg{background:#ff6b6b;box-shadow:0 0 16px #ff6b6b}.title{font-size:15px;color:#c9d8ea;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;font-weight:800}.pipeline{display:flex;align-items:center;justify-content:space-between;gap:8px}.step{flex:1;min-height:70px;border:1px solid #24415f;border-radius:14px;background:#0b1728;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;font-weight:700;font-size:12px}.arrow{color:#456d9b;font-weight:900}.barrow{display:grid;grid-template-columns:150px 1fr 50px;align-items:center;gap:10px;margin:12px 0}.barlabel{color:#b8c9de;font-size:13px}.bar{height:11px;background:#17263a;border-radius:999px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,#248bff,#2ce59b);border-radius:999px}.fill.orangefill{background:linear-gradient(90deg,#ffb86b,#ff7a45)}.fill.redfill{background:linear-gradient(90deg,#ff6b6b,#ff3b3b)}.barval{text-align:right;color:#dbe7f5;font-weight:700;font-size:13px}.list{display:flex;flex-direction:column;gap:10px}.row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #1d3048;padding-bottom:10px;color:#b8c9de}.row b{color:#e9eef7}.verdict{font-size:38px;font-weight:900;color:#2ce59b;letter-spacing:.04em}.subtle{color:#8fa3bf;line-height:1.45;font-size:14px}.warnbox{border:1px solid #4b2630;background:rgba(255,107,107,.08);border-radius:14px;padding:14px;color:#ffb2b2}.chart{height:180px;display:flex;align-items:end;gap:10px;padding-top:12px}.col{flex:1;background:linear-gradient(180deg,#2ce59b,#248bff);border-radius:8px 8px 0 0;position:relative;min-height:20px}.col span{position:absolute;bottom:-24px;width:100%;text-align:center;font-size:11px;color:#8fa3bf}.footer{margin-top:14px;color:#61728a;font-size:12px;text-align:center}@media(max-width:900px){.span3,.span4,.span5,.span6,.span7{grid-column:span 12}.pipeline{flex-direction:column}.arrow{transform:rotate(90deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><h1>ANTIGRAVITY · Dashboard de Validación</h1><p>Demo visual académica: backtest importado, métricas recalculadas, validación estadística y control determinista.</p></div>
+    <div class="badges"><span class="badge green">FASE 4.4 COMPLETADA</span><span class="badge orange">ALLOW_REAL_EXECUTION = False</span><span class="badge blue">117 TESTS PASSED</span></div>
+  </div>
+
+  <div class="grid">
+    <div class="card span3 kpi"><div class="label">Estado final</div><div class="verdict">OBSERVATION</div><div class="note">Demo: degradado por baja confianza estadística</div></div>
+    <div class="card span3 kpi"><div class="label">RiskEngine</div><div class="num red">BLOCKED</div><div class="note">R1 bloquea ejecución real</div></div>
+    <div class="card span3 kpi"><div class="label">AI Validator</div><div class="num blue">INFO</div><div class="note">Explicativo, no vinculante</div></div>
+    <div class="card span3 kpi"><div class="label">Operaciones reales</div><div class="num green">0</div><div class="note">Sistema académico seguro</div></div>
+
+    <div class="card span12">
+      <div class="title">Pipeline ejecutado</div>
+      <div class="pipeline">
+        <div class="step">MT5 HTML<br>Report</div><div class="arrow">→</div><div class="step">Parser<br>+ SHA256</div><div class="arrow">→</div><div class="step">Metrics<br>Engine</div><div class="arrow">→</div><div class="step">Monte Carlo<br>Risk of Ruin</div><div class="arrow">→</div><div class="step">Backtest<br>Validator</div><div class="arrow">→</div><div class="step">RiskEngine</div><div class="arrow">→</div><div class="step">AI Validator<br>Mock</div><div class="arrow">→</div><div class="step">Human<br>Approval</div>
+      </div>
+    </div>
+
+    <div class="card span7">
+      <div class="title">Métricas de estrategia · ejemplo demo</div>
+      <div class="barrow"><div class="barlabel">Profit Factor</div><div class="bar"><div class="fill" style="width:74%"></div></div><div class="barval">1.48</div></div>
+      <div class="barrow"><div class="barlabel">Win Rate</div><div class="bar"><div class="fill" style="width:62%"></div></div><div class="barval">62%</div></div>
+      <div class="barrow"><div class="barlabel">Sortino</div><div class="bar"><div class="fill" style="width:58%"></div></div><div class="barval">1.16</div></div>
+      <div class="barrow"><div class="barlabel">Max Drawdown</div><div class="bar"><div class="fill orangefill" style="width:34%"></div></div><div class="barval">8.4%</div></div>
+      <div class="barrow"><div class="barlabel">Risk of Ruin</div><div class="bar"><div class="fill redfill" style="width:18%"></div></div><div class="barval">3.2%</div></div>
+      <p class="subtle">Los valores son ilustrativos para la demo visual. El sistema real recalcula métricas desde operaciones extraídas del informe MT5.</p>
+    </div>
+
+    <div class="card span5">
+      <div class="title">Monte Carlo · distribución simulada</div>
+      <div class="chart">
+        <div class="col" style="height:45%"><span>P5</span></div><div class="col" style="height:72%"><span>P25</span></div><div class="col" style="height:92%"><span>P50</span></div><div class="col" style="height:66%"><span>P75</span></div><div class="col" style="height:38%"><span>P95</span></div>
+      </div>
+      <p class="subtle" style="margin-top:30px">Visualiza percentiles de robustez y drawdown. Si aparece low_confidence, el BacktestValidator limita la clasificación.</p>
+    </div>
+
+    <div class="card span6">
+      <div class="title">Decisiones del sistema</div>
+      <div class="list">
+        <div class="row"><span>SHA-256 Traceability</span><b class="green">OK</b></div>
+        <div class="row"><span>Metrics Engine</span><b class="green">RECALCULATED</b></div>
+        <div class="row"><span>Monte Carlo</span><b class="orange">LOW CONFIDENCE</b></div>
+        <div class="row"><span>BacktestValidator</span><b class="orange">OBSERVATION</b></div>
+        <div class="row"><span>RiskEngine</span><b class="red">REAL EXECUTION BLOCKED</b></div>
+        <div class="row"><span>AI Validator</span><b class="blue">HUMAN REVIEW</b></div>
+      </div>
+    </div>
+
+    <div class="card span6">
+      <div class="title">Invariantes activas</div>
+      <div class="warnbox">
+        <p>⊘ La IA no decide · ⊘ La IA no ejecuta · ⊘ No bypass RiskEngine</p><br>
+        <p><b>approved_for_real = False</b></p>
+        <p><b>ALLOW_REAL_EXECUTION = False</b></p>
+      </div>
+      <p class="subtle" style="margin-top:14px">El dashboard debe demostrar el flujo, no simular ejecución real ni prometer rentabilidad.</p>
+    </div>
+  </div>
+  <div class="footer">Antigravity · Academic Research Dashboard · GitHub: github.com/TheLord1995/Proyecto_Antigravity_David</div>
+</div>
+</body>
+</html>

@@ -104,6 +104,19 @@ MT5 HTML Report (Reporte nativo)
 
 ---
 
+## 🎬 Material Visual de Presentación
+
+Recursos visuales preparados para la defensa académica y la demo funcional del proyecto:
+
+| Recurso | Descripción | Enlace |
+| :--- | :--- | :--- |
+| **Infografía del Proyecto** | Visión general de la arquitectura, el pipeline, invariantes de seguridad y roadmap. | [antigravity_infografia-V1.html](docs/Presentacion/antigravity_infografia-V1.html) |
+| **Dashboard de Validación** | Consola de resultados del pipeline completo: métricas, Monte Carlo, BacktestValidator y RiskEngine. | [antigravity_dashboard_demo-V1.html](docs/Presentacion/antigravity_dashboard_demo-V1.html) |
+
+> 💡 Ambos archivos son páginas HTML estáticas que se abren directamente en el navegador sin servidor local ni dependencias externas. Reflejan el estado de la **Fase 4.4 completada** con **117 tests passing**, `ALLOW_REAL_EXECUTION=False` y `approved_for_real=False`.
+
+---
+
 ## 🔧 Instalación
 
 ### 1. Requisitos Previos
