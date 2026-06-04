@@ -817,7 +817,8 @@ class AcademicDemoGUI:
                 self.root.after(0, lambda: self._open_result())
                 
             except Exception as e:
-                self.root.after(0, lambda: self._show_error(str(e)))
+                error_msg = str(e)
+                self.root.after(0, lambda msg=error_msg: self._show_error(msg))
                 
         import threading
         thread = threading.Thread(target=run_in_thread, daemon=True)
