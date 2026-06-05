@@ -4,7 +4,7 @@ demo/academic_demo_gui.py
 Capa visual interactiva para la demo académica del pipeline de Antigravity.
 
 Permite:
-  1. Seleccionar informe MT5 desde tests/data/
+  1. Seleccionar informe MT5 desde tests/data/ (o cualquier ruta)
   2. Pulsar "Ejecutar análisis" y ver avanzar el pipeline por fases
   3. Abrir el resultado HTML al finalizar
 
@@ -19,6 +19,7 @@ Restricciones de seguridad activas:
 import io
 import os
 import sys
+import time
 import uuid
 import webbrowser
 from datetime import datetime, timezone, timedelta
@@ -56,73 +57,267 @@ from core.models import TradeIntent, AccountState
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
+# ── Imports para parseo de trades desde HTML ──────────────────────────────────
+from bs4 import BeautifulSoup
+
 # ── Configuración de rutas ─────────────────────────────────────────────────────
 DEMO_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = DEMO_DIR / "output"
 TEST_DATA_DIR = ROOT_DIR / "tests" / "data"
-MT5_REPORT_PATH = TEST_DATA_DIR / "sample_mt5_report_en.html"
+MT5_REPORT_PATH = TEST_DATA_DIR / "sample_mt5_report_en.html"   # valor por defecto
 OUTPUT_HTML = OUTPUT_DIR / "academic_demo_result.html"
 
 # ── Constantes de seguridad (inmutables) ──────────────────────────────────────
 ALLOW_REAL_EXECUTION = False
 APPROVED_FOR_REAL = False
+STEP_DELAY_MS = 1500
+
 
 # =============================================================================
-# DATOS SINTÉTICOS PARA DEMO (sin MT5 real)
+# EXTRACTOR DE TRADES REALES DESDE HTML MT5
 # =============================================================================
 
-def _build_synthetic_trades() -> list[TradeRecord]:
+def _parse_html_report_trades(file_path: str) -> list[TradeRecord]:
     """
-    Genera 20 TradeRecord sintéticos que simulan operaciones de un backtest.
+    Extrae operaciones reales (TradeRecord) de la tabla de transacciones de un
+    informe HTML de MetaTrader 5, tanto en español como en inglés.
+
+    La tabla de transacciones/deals es la segunda tabla del HTML. Cada par
+    entrada('in') + salida('out') constituye un trade completo (FIFO).
+
+    Returns:
+        Lista de TradeRecord. Puede ser vacía si no hay tabla de transacciones
+        o si no se encuentran pares entrada/salida válidos.
     """
-    base_open = datetime(2023, 1, 10, 9, 0, 0, tzinfo=timezone.utc)
-    results = [
-        120.5, -45.2, 88.3, -30.1, 210.7, -60.4, 55.0, 190.2,
-        -80.3, 75.6, -22.5, 145.8, -95.0, 65.4, 110.0, -40.0,
-        88.0, -55.5, 200.0, 130.0,
-    ]
-    trades = []
-    for i, pl in enumerate(results):
-        open_t = base_open + timedelta(days=i * 2, hours=i % 8)
-        close_t = open_t + timedelta(hours=4 + i % 3)
-        direction = TradeDirection.BUY if pl > 0 else TradeDirection.SELL
-        trades.append(TradeRecord(
-            ticket=f"DEMO-{1000 + i}",
-            symbol="EURUSD",
-            open_time=open_t,
-            close_time=close_t,
-            direction=direction,
-            volume=0.10,
-            open_price=1.08000 + i * 0.0001,
-            close_price=1.08000 + i * 0.0001 + (pl / 100000),
-            commission=-0.50,
-            swap=-0.10 if i % 3 == 0 else 0.0,
-            profit_loss=pl,
-        ))
+    # Determinar encoding (MT5 puede generar UTF-16LE o UTF-8)
+    raw_bytes = Path(file_path).read_bytes()
+    if raw_bytes[:2] in (b'\xff\xfe', b'\xfe\xff'):
+        html = raw_bytes.decode('utf-16', errors='replace')
+    else:
+        html = raw_bytes.decode('utf-8', errors='replace')
+
+    soup = BeautifulSoup(html, 'lxml')
+    tables = soup.find_all('table')
+
+    # La tabla de transacciones es la segunda tabla del informe MT5
+    if len(tables) < 2:
+        return []
+
+    deals_table = tables[1]
+    rows = deals_table.find_all('tr')
+
+    # ── Localizar la fila de cabecera de la sección "Transacciones / Deals" ──
+    header_idx = -1
+    for idx, r in enumerate(rows):
+        cells = [td.get_text().strip() for td in r.find_all(['td', 'th'])]
+        # Cabecera de la tabla de transacciones (columnas de detalle)
+        # Necesita al menos 11 columnas y contener columna de Dirección/Direction
+        has_direction = any(c in cells for c in ['Dirección', 'Direction'])
+        has_time = any(c in cells for c in ['Fecha/Hora', 'Time'])
+        if len(cells) >= 11 and has_direction and has_time:
+            header_idx = idx
+            break
+
+    if header_idx == -1:
+        return []
+
+    header_row = [td.get_text().strip() for td in rows[header_idx].find_all(['td', 'th'])]
+
+    # ── Mapear cabeceras a índices de columna ─────────────────────────────────
+    _TIME_HDRS     = {'Fecha/Hora', 'Time', 'Date'}
+    _TICKET_HDRS   = {'Transacción', 'Deal', 'Transaction', 'ID', 'Ticket'}
+    _SYMBOL_HDRS   = {'Símbolo', 'Symbol'}
+    _TYPE_HDRS     = {'Tipo', 'Type'}
+    _DIR_HDRS      = {'Dirección', 'Direction'}
+    _VOL_HDRS      = {'Volumen', 'Volume'}
+    _PRICE_HDRS    = {'Precio', 'Price'}
+    _COMM_HDRS     = {'Comisión', 'Commission'}
+    _SWAP_HDRS     = {'Swap'}
+    _PROFIT_HDRS   = {'Beneficio', 'Profit'}
+    _COMMENT_HDRS  = {'Comentario', 'Comment'}
+
+    col_map: dict[str, int] = {}
+    for i, h in enumerate(header_row):
+        h = h.strip()
+        if h in _TIME_HDRS:
+            col_map.setdefault('time', i)
+        elif h in _TICKET_HDRS:
+            col_map.setdefault('ticket', i)
+        elif h in _SYMBOL_HDRS:
+            col_map.setdefault('symbol', i)
+        elif h in _TYPE_HDRS:
+            col_map.setdefault('type', i)
+        elif h in _DIR_HDRS:
+            col_map.setdefault('dir', i)
+        elif h in _VOL_HDRS:
+            col_map.setdefault('vol', i)
+        elif h in _PRICE_HDRS:
+            col_map.setdefault('price', i)
+        elif h in _COMM_HDRS:
+            col_map.setdefault('comm', i)
+        elif h in _SWAP_HDRS:
+            col_map.setdefault('swap', i)
+        elif h in _PROFIT_HDRS:
+            col_map.setdefault('profit', i)
+        elif h in _COMMENT_HDRS:
+            col_map.setdefault('comment', i)
+
+    required = ['time', 'ticket', 'type', 'dir', 'vol', 'price', 'profit']
+    if not all(k in col_map for k in required):
+        return []
+
+    # ── Utilidades ────────────────────────────────────────────────────────────
+    def _to_float(val: str) -> float:
+        if not val:
+            return 0.0
+        val = val.replace('\xa0', '').replace('\u202f', '').replace(' ', '').replace(',', '.')
+        try:
+            return float(val)
+        except ValueError:
+            return 0.0
+
+    def _to_datetime(val: str) -> datetime:
+        for fmt in ('%Y.%m.%d %H:%M:%S', '%Y.%m.%d %H:%M'):
+            try:
+                return datetime.strptime(val, fmt).replace(tzinfo=timezone.utc)
+            except ValueError:
+                pass
+        return datetime.now(timezone.utc)
+
+    def _cell(cells: list[str], key: str) -> str:
+        idx = col_map.get(key, -1)
+        if idx < 0 or idx >= len(cells):
+            return ''
+        return cells[idx]
+
+    # ── Reconstruir trades con matching FIFO ──────────────────────────────────
+    open_deals: dict[str, list[dict]] = {}   # símbolo → pila de entradas abiertas
+    trades: list[TradeRecord] = []
+
+    for r in rows[header_idx + 1:]:
+        cells_raw = r.find_all(['td', 'th'])
+        if len(cells_raw) < len(header_row):
+            continue
+        cells = [td.get_text().strip() for td in cells_raw]
+
+        t_type  = _cell(cells, 'type').lower()
+        if t_type == 'balance' or t_type == '':
+            continue
+
+        direction = _cell(cells, 'dir').lower()
+        symbol    = _cell(cells, 'symbol').strip()
+        if not symbol:
+            continue
+
+        ticket    = _cell(cells, 'ticket').strip()
+        t_time    = _to_datetime(_cell(cells, 'time'))
+        vol       = _to_float(_cell(cells, 'vol'))
+        price     = _to_float(_cell(cells, 'price'))
+        comm      = _to_float(_cell(cells, 'comm'))
+        swap      = _to_float(_cell(cells, 'swap'))
+        profit    = _to_float(_cell(cells, 'profit'))
+
+        if symbol not in open_deals:
+            open_deals[symbol] = []
+
+        if direction == 'in':
+            open_deals[symbol].append({
+                'time': t_time, 'ticket': ticket, 'type': t_type,
+                'vol': vol, 'price': price, 'comm': comm, 'swap': swap,
+            })
+
+        elif direction == 'out':
+            if open_deals[symbol]:
+                entry = open_deals[symbol].pop(0)
+                trade_dir = (TradeDirection.BUY
+                             if entry['type'].lower() == 'buy'
+                             else TradeDirection.SELL)
+                # open_price debe ser > 0 para pasar la validación Pydantic
+                open_p = entry['price'] if entry['price'] > 0 else price
+                close_p = price if price > 0 else open_p
+                trades.append(TradeRecord(
+                    ticket=ticket,
+                    symbol=symbol,
+                    open_time=entry['time'],
+                    close_time=t_time,
+                    direction=trade_dir,
+                    volume=max(vol, 0.01),
+                    open_price=open_p,
+                    close_price=close_p,
+                    commission=entry['comm'] + comm,
+                    swap=entry['swap'] + swap,
+                    profit_loss=profit,
+                ))
+
+        elif direction in ('in/out', 'inout'):
+            # Cierra la posición abierta y registra una nueva entrada opuesta
+            if open_deals[symbol]:
+                entry = open_deals[symbol].pop(0)
+                trade_dir = (TradeDirection.BUY
+                             if entry['type'].lower() == 'buy'
+                             else TradeDirection.SELL)
+                open_p = entry['price'] if entry['price'] > 0 else price
+                close_p = price if price > 0 else open_p
+                trades.append(TradeRecord(
+                    ticket=ticket,
+                    symbol=symbol,
+                    open_time=entry['time'],
+                    close_time=t_time,
+                    direction=trade_dir,
+                    volume=max(vol, 0.01),
+                    open_price=open_p,
+                    close_price=close_p,
+                    commission=entry['comm'] + comm,
+                    swap=entry['swap'] + swap,
+                    profit_loss=profit,
+                ))
+                # Añadir la nueva entrada opuesta
+                new_type = 'sell' if t_type in ('buy',) else 'buy'
+                open_deals[symbol].append({
+                    'time': t_time, 'ticket': ticket, 'type': new_type,
+                    'vol': vol, 'price': price, 'comm': 0.0, 'swap': 0.0,
+                })
+            else:
+                open_deals[symbol].append({
+                    'time': t_time, 'ticket': ticket, 'type': t_type,
+                    'vol': vol, 'price': price, 'comm': comm, 'swap': swap,
+                })
+
     return trades
 
 
 # =============================================================================
-# PIPELINE PRINCIPAL (reutiliza la lógica de run_academic_demo.py)
+# PIPELINE PRINCIPAL
 # =============================================================================
 
-def run_pipeline(gui_callback=None) -> dict:
+def run_pipeline(report_path: str = None, gui_callback=None) -> dict:
     """
     Ejecuta el pipeline completo de validación académica.
     Retorna un diccionario con todos los resultados para el informe HTML.
-    
+
     Args:
+        report_path:  Ruta al informe MT5 HTML seleccionado por el usuario.
+                      Si es None se usa MT5_REPORT_PATH como fallback.
         gui_callback: Función opcional para actualizar la GUI entre pasos.
                       Debe aceptar (step_number, step_name, status)
     """
-    results = {}
-    
+    if report_path is None:
+        report_path = str(MT5_REPORT_PATH)
+
+    report_file = Path(report_path)
+    results: dict = {}
+
+    def _delay():
+        if gui_callback:
+            time.sleep(STEP_DELAY_MS / 1000.0)
+
     # ──────────────────────────────────────────────────────────────────────────
     # PASO 1: Parsear informe MT5 HTML
     # ──────────────────────────────────────────────────────────────────────────
     if gui_callback:
         gui_callback(1, "MT5HtmlParser - Parseando informe MT5", "running")
-    
+    _delay()
+
     parser = MT5HtmlParser()
     is_period = BacktestPeriod(
         start_date=datetime(2023, 1, 1, tzinfo=timezone.utc),
@@ -136,7 +331,7 @@ def run_pipeline(gui_callback=None) -> dict:
     )
 
     backtest_report: BacktestReport = parser.parse(
-        file_path=str(MT5_REPORT_PATH),
+        file_path=str(report_file),
         strategy_id="DEMO-EURUSD-H1-ANTIGRAVITY",
         version="1.0.0-demo",
         is_period=is_period,
@@ -144,24 +339,32 @@ def run_pipeline(gui_callback=None) -> dict:
     )
 
     sha256_hash = backtest_report.raw_metrics.get("source_file_hash", "N/A")
-    
-    results["sha256"] = sha256_hash
-    results["mt5_trades"] = backtest_report.total_trades
+
+    results["sha256"]            = sha256_hash
+    results["mt5_trades"]        = backtest_report.total_trades
     results["mt5_profit_factor"] = backtest_report.profit_factor_is
-    results["mt5_drawdown"] = backtest_report.max_drawdown_pct
-    results["mt5_sharpe"] = backtest_report.sharpe_ratio
-    results["mt5_win_rate"] = backtest_report.win_rate
+    results["mt5_drawdown"]      = backtest_report.max_drawdown_pct
+    results["mt5_sharpe"]        = backtest_report.sharpe_ratio
+    results["mt5_win_rate"]      = backtest_report.win_rate
+    results["report_name"]       = report_file.name   # ← nombre real del fichero
 
     if gui_callback:
         gui_callback(1, "MT5HtmlParser - Completado (SHA-256)", "done")
 
     # ──────────────────────────────────────────────────────────────────────────
-    # PASO 2: MetricsEngine — Recalcular métricas
+    # PASO 2: Extraer operaciones reales + MetricsEngine
     # ──────────────────────────────────────────────────────────────────────────
     if gui_callback:
-        gui_callback(2, "MetricsEngine - Recálculo de métricas", "running")
+        gui_callback(2, "MetricsEngine - Extrayendo operaciones reales", "running")
+    _delay()
 
-    trades = _build_synthetic_trades()
+    trades = _parse_html_report_trades(str(report_file))
+
+    if not trades:
+        raise ValueError(
+            "No se pudieron extraer operaciones reales del informe seleccionado."
+        )
+
     calculated = MetricsEngine.calculate(
         trades=trades,
         initial_balance=10_000.0,
@@ -169,20 +372,21 @@ def run_pipeline(gui_callback=None) -> dict:
     )
 
     results["calc_profit_factor"] = calculated.profit_factor
-    results["calc_expectancy"] = calculated.expectancy
-    results["calc_win_rate"] = round(calculated.win_rate * 100, 2)
-    results["calc_sortino"] = calculated.sortino_ratio
+    results["calc_expectancy"]    = calculated.expectancy
+    results["calc_win_rate"]      = round(calculated.win_rate * 100, 2)
+    results["calc_sortino"]       = calculated.sortino_ratio
     results["calc_max_daily_loss"] = calculated.max_daily_loss_pct
-    results["calc_max_streak"] = calculated.max_losing_streak
+    results["calc_max_streak"]    = calculated.max_losing_streak
 
     if gui_callback:
-        gui_callback(2, "MetricsEngine - Completado", "done")
+        gui_callback(2, f"MetricsEngine - Completado ({len(trades)} operaciones)", "done")
 
     # ──────────────────────────────────────────────────────────────────────────
     # PASO 3: MonteCarloEngine — 1000 simulaciones
     # ──────────────────────────────────────────────────────────────────────────
     if gui_callback:
         gui_callback(3, "MonteCarloEngine - Ejecutando 1000 simulaciones", "running")
+    _delay()
 
     mc_result = MonteCarloEngine.simulate(
         trades=trades,
@@ -193,15 +397,15 @@ def run_pipeline(gui_callback=None) -> dict:
         ruin_threshold_pct=0.30,
     )
 
-    results["mc_risk_of_ruin"] = round(mc_result.risk_of_ruin_pct * 100, 4)
-    results["mc_dd_p50"] = mc_result.monte_carlo_max_drawdown_p50
-    results["mc_dd_p95"] = mc_result.monte_carlo_max_drawdown_p95
-    results["mc_dd_p99"] = mc_result.monte_carlo_max_drawdown_p99
-    results["mc_median_equity"] = mc_result.median_final_equity
-    results["mc_p05_equity"] = mc_result.p05_final_equity
-    results["mc_p95_equity"] = mc_result.p95_final_equity
+    results["mc_risk_of_ruin"]   = round(mc_result.risk_of_ruin_pct * 100, 4)
+    results["mc_dd_p50"]         = mc_result.monte_carlo_max_drawdown_p50
+    results["mc_dd_p95"]         = mc_result.monte_carlo_max_drawdown_p95
+    results["mc_dd_p99"]         = mc_result.monte_carlo_max_drawdown_p99
+    results["mc_median_equity"]  = mc_result.median_final_equity
+    results["mc_p05_equity"]     = mc_result.p05_final_equity
+    results["mc_p95_equity"]     = mc_result.p95_final_equity
     results["mc_low_confidence"] = mc_result.low_confidence
-    results["mc_simulations"] = mc_result.n_simulations
+    results["mc_simulations"]    = mc_result.n_simulations
     results["mc_approved_for_real"] = mc_result.approved_for_real
 
     if gui_callback:
@@ -212,11 +416,12 @@ def run_pipeline(gui_callback=None) -> dict:
     # ──────────────────────────────────────────────────────────────────────────
     if gui_callback:
         gui_callback(4, "BacktestValidator - Validando 10 reglas", "running")
+    _delay()
 
     backtest_report_enriched = backtest_report.model_copy(update={
-        "sortino_ratio": calculated.sortino_ratio,
+        "sortino_ratio":      calculated.sortino_ratio,
         "max_daily_loss_pct": calculated.max_daily_loss_pct,
-        "risk_of_ruin_pct": mc_result.risk_of_ruin_pct * 100,
+        "risk_of_ruin_pct":   mc_result.risk_of_ruin_pct * 100,
         "calculated_metrics": calculated,
         "monte_carlo_result": mc_result,
     })
@@ -266,7 +471,7 @@ def run_pipeline(gui_callback=None) -> dict:
     )
 
     results["bv_classification"] = evaluation.classification.value
-    results["bv_reason"] = evaluation.decision_reason
+    results["bv_reason"]         = evaluation.decision_reason
     results["bv_approved_for_real"] = evaluation.approved_for_real
 
     if gui_callback:
@@ -277,6 +482,7 @@ def run_pipeline(gui_callback=None) -> dict:
     # ──────────────────────────────────────────────────────────────────────────
     if gui_callback:
         gui_callback(5, "RiskEngine - Evaluando reglas de seguridad", "running")
+    _delay()
 
     risk_engine = RiskEngine()
     trade_intent = TradeIntent(
@@ -302,31 +508,59 @@ def run_pipeline(gui_callback=None) -> dict:
 
     risk_result = risk_engine.evaluate(trade_intent, account_state)
 
-    results["re_approved"] = risk_result.approved
-    results["re_reason"] = risk_result.reason
-    results["re_score"] = risk_result.risk_score
+    results["re_approved"]    = risk_result.approved
+    results["re_reason"]      = risk_result.reason
+    results["re_score"]       = risk_result.risk_score
     results["re_failed_rules"] = risk_result.failed_rules
 
     if gui_callback:
         gui_callback(5, f"RiskEngine - {'Aprobado' if risk_result.approved else 'Bloqueado'}", "done")
 
     # ──────────────────────────────────────────────────────────────────────────
-    # PASO 6: Generar HTML de resultado
+    # PASO 6: MT5 Demo Connector MOCK
     # ──────────────────────────────────────────────────────────────────────────
     if gui_callback:
-        gui_callback(6, "Generando informe HTML", "running")
+        gui_callback(6, "MT5 Demo Connector MOCK", "running")
+    _delay()
+    if gui_callback:
+        gui_callback(6, "No se envían órdenes reales", "done")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # PASO 7: Telegram Approval MOCK
+    # ──────────────────────────────────────────────────────────────────────────
+    if gui_callback:
+        gui_callback(7, "Telegram Approval MOCK", "running")
+    _delay()
+    if gui_callback:
+        gui_callback(7, "Simulación de aprobación humana", "done")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # PASO 8: TradingView Webhook MOCK
+    # ──────────────────────────────────────────────────────────────────────────
+    if gui_callback:
+        gui_callback(8, "TradingView Webhook MOCK", "running")
+    _delay()
+    if gui_callback:
+        gui_callback(8, "Señal externa simulada", "done")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # PASO 9: Generar HTML de resultado
+    # ──────────────────────────────────────────────────────────────────────────
+    if gui_callback:
+        gui_callback(9, "Generando informe HTML", "running")
+    _delay()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     _generate_html(results)
 
     if gui_callback:
-        gui_callback(6, "Informe HTML generado", "done")
+        gui_callback(9, "Informe HTML generado", "done")
 
     return results
 
 
 # =============================================================================
-# GENERADOR DE HTML (reutilizado de run_academic_demo.py)
+# GENERADOR DE HTML
 # =============================================================================
 
 def _generate_html(r: dict) -> None:
@@ -334,8 +568,8 @@ def _generate_html(r: dict) -> None:
     bv_class = r.get("bv_classification", "UNKNOWN")
     bv_color = {
         "PAPER_TRADING_READY": "#2ce59b",
-        "OBSERVATION": "#ffb86b",
-        "REJECTED": "#ff6b6b",
+        "OBSERVATION":         "#ffb86b",
+        "REJECTED":            "#ff6b6b",
     }.get(bv_class, "#8fa3bf")
 
     re_approved = r.get("re_approved", False)
@@ -348,12 +582,15 @@ def _generate_html(r: dict) -> None:
     ) or '<li style="color:#2ce59b">Sin reglas fallidas</li>'
 
     mc_low_conf_badge = (
-        '<span style="color:#ffb86b;font-weight:700">⚠ LOW CONFIDENCE (<30 trades demo)</span>'
+        '<span style="color:#ffb86b;font-weight:700">⚠ LOW CONFIDENCE (&lt;30 trades)</span>'
         if r.get("mc_low_confidence") else
         '<span style="color:#2ce59b;font-weight:700">✓ HIGH CONFIDENCE</span>'
     )
 
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Nombre real del fichero seleccionado
+    report_name = r.get("report_name", "N/A")
 
     html = f"""<!DOCTYPE html>
 <html lang="es">
@@ -438,7 +675,7 @@ ul{{list-style:none;padding-left:0}}
 
     <!-- Pipeline -->
     <div class="card span12">
-      <div class="title">Pipeline Ejecutado — 6 Pasos</div>
+      <div class="title">Pipeline Ejecutado — 9 Pasos</div>
       <div class="pipeline">
         <div class="step done">MT5 HTML<br>Parser<br>✓</div>
         <div class="arrow">→</div>
@@ -451,6 +688,12 @@ ul{{list-style:none;padding-left:0}}
         <div class="step done">Backtest<br>Validator<br>✓</div>
         <div class="arrow">→</div>
         <div class="step done">Risk<br>Engine<br>✓</div>
+        <div class="arrow">→</div>
+        <div class="step done" style="border-color:#ffb86b;color:#ffb86b">MT5 Demo<br>MOCK<br>SIMULATED</div>
+        <div class="arrow">→</div>
+        <div class="step done" style="border-color:#ffb86b;color:#ffb86b">Telegram<br>MOCK<br>REVIEW</div>
+        <div class="arrow">→</div>
+        <div class="step done" style="border-color:#ffb86b;color:#ffb86b">TradingView<br>MOCK<br>ROADMAP</div>
       </div>
     </div>
 
@@ -461,7 +704,7 @@ ul{{list-style:none;padding-left:0}}
       <div class="bar-row"><div class="bar-lbl">Win Rate</div><div class="bar"><div class="fill fg" style="width:{r.get('mt5_win_rate',0):.0f}%"></div></div><div class="bar-val">{r.get('mt5_win_rate',0):.1f}%</div></div>
       <div class="bar-row"><div class="bar-lbl">Max Drawdown</div><div class="bar"><div class="fill fo" style="width:{min(r.get('mt5_drawdown',0)*8,100):.0f}%"></div></div><div class="bar-val">{r.get('mt5_drawdown',0):.2f}%</div></div>
       <div class="bar-row"><div class="bar-lbl">Sharpe Ratio</div><div class="bar"><div class="fill fg" style="width:{min(r.get('mt5_sharpe',0)*50,100):.0f}%"></div></div><div class="bar-val">{r.get('mt5_sharpe',0):.2f}</div></div>
-      <p class="subtle">Fuente: {MT5_REPORT_PATH.name} · SHA-256: {r.get('sha256','N/A')[:20]}...</p>
+      <p class="subtle">Fuente: {report_name} · SHA-256: {r.get('sha256','N/A')[:20]}...</p>
     </div>
 
     <!-- Métricas recalculadas -->
@@ -485,7 +728,7 @@ ul{{list-style:none;padding-left:0}}
       <div class="row-item"><span>Equity Mediana Final</span><b style="color:#2ce59b">${r.get('mc_median_equity',0):,.2f}</b></div>
       <div class="row-item"><span>Equity P5 (peor caso)</span><b style="color:#ff6b6b">${r.get('mc_p05_equity',0):,.2f}</b></div>
       <div class="row-item"><span>Equity P95 (mejor caso)</span><b style="color:#2ce59b">${r.get('mc_p95_equity',0):,.2f}</b></div>
-      <p class="subtle">{mc_low_conf_badge} — Dataset demo con 20 trades sintéticos</p>
+      <p class="subtle">{mc_low_conf_badge} — Operaciones reales del informe seleccionado</p>
     </div>
 
     <!-- Decisiones del sistema -->
@@ -510,7 +753,7 @@ ul{{list-style:none;padding-left:0}}
         <p style="color:#8fa3bf;font-size:12px">Reglas RiskEngine fallidas en esta evaluación:</p>
         <ul style="margin-top:8px">{failed_rules_html}</ul>
       </div>
-      <p class="subtle">Esta demo demuestra el flujo de validación académica sin ejecutar operaciones reales. Todos los datos son ficticios o de prueba.</p>
+      <p class="subtle">Esta demo demuestra el flujo de validación académica sin ejecutar operaciones reales. Fuente: {report_name}</p>
     </div>
 
   </div>
@@ -533,38 +776,50 @@ ul{{list-style:none;padding-left:0}}
 
 class AcademicDemoGUI:
     """Interfaz gráfica para la demo académica de Antigravity."""
-    
+
     # Definición de pasos del pipeline
     PIPELINE_STEPS = [
-        (1, "MT5HtmlParser", "Parseando informe MT5 y calculando SHA-256"),
-        (2, "MetricsEngine", "Recalculando métricas desde trades sintéticos"),
-        (3, "MonteCarlo", "Ejecutando 1000 simulaciones (seed=42)"),
-        (4, "BacktestValidator", "Validando con 10 reglas deterministas"),
-        (5, "RiskEngine", "Evaluando 6 reglas de seguridad operativa"),
-        (6, "Generación HTML", "Generando informe de resultados"),
+        (1, "MT5HtmlParser",              "Parseando informe MT5 y calculando SHA-256"),
+        (2, "MetricsEngine",              "Extrayendo operaciones reales y recalculando métricas"),
+        (3, "MonteCarlo",                 "Ejecutando 1000 simulaciones (seed=42)"),
+        (4, "BacktestValidator",          "Validando con 10 reglas deterministas"),
+        (5, "RiskEngine",                 "Evaluando 6 reglas de seguridad operativa"),
+        (6, "MT5 Demo Connector MOCK",    "No se envían órdenes reales (SIMULATED)"),
+        (7, "Telegram Approval MOCK",     "Simulación de aprobación humana (HUMAN REVIEW REQUIRED)"),
+        (8, "TradingView Webhook MOCK",   "Señal externa simulada (ROADMAP / SIMULATED)"),
+        (9, "Generación HTML",            "Generando informe de resultados"),
     ]
-    
+
     def __init__(self, root):
         self.root = root
         self.root.title("Antigravity - Demo Académica Interactiva")
         self.root.geometry("800x700")
         self.root.configure(bg="#070b16")
-        
-        # Archivo seleccionado
-        self.selected_file = tk.StringVar(value=str(MT5_REPORT_PATH))
-        
+
+        # Ruta del informe seleccionado — valor inicial: fichero de muestra
+        self.selected_report_path: str = str(MT5_REPORT_PATH)
+        self.selected_file = tk.StringVar(value=self.selected_report_path)
+
+        # Sincronizar self.selected_report_path cuando el usuario edita el Entry
+        self.selected_file.trace_add("write", self._on_path_changed)
+
         # Estado de los pasos
         self.step_frames = []
-        
+
         self._create_widgets()
-        
+
+    # ── Sincronización del path ───────────────────────────────────────────────
+    def _on_path_changed(self, *_):
+        """Mantiene self.selected_report_path sincronizado con el Entry."""
+        self.selected_report_path = self.selected_file.get()
+
     def _create_widgets(self):
         """Crea todos los widgets de la interfaz."""
-        
+
         # ── Header ─────────────────────────────────────────────────────────────
         header_frame = tk.Frame(self.root, bg="#070b16")
         header_frame.pack(fill=tk.X, padx=20, pady=(20, 10))
-        
+
         title = tk.Label(
             header_frame,
             text="ANTIGRAVITY · Demo Académica Interactiva",
@@ -573,7 +828,7 @@ class AcademicDemoGUI:
             bg="#070b16"
         )
         title.pack(anchor=tk.W)
-        
+
         subtitle = tk.Label(
             header_frame,
             text="Pipeline de validación académica - Fase 4.4",
@@ -582,18 +837,18 @@ class AcademicDemoGUI:
             bg="#070b16"
         )
         subtitle.pack(anchor=tk.W, pady=(2, 0))
-        
+
         # ── Badges de seguridad ───────────────────────────────────────────────
         badges_frame = tk.Frame(self.root, bg="#070b16")
         badges_frame.pack(fill=tk.X, padx=20, pady=10)
-        
+
         badge_styles = [
             ("ALLOW_REAL_EXECUTION = False", "#ff6b6b"),
-            ("approved_for_real = False", "#ff6b6b"),
-            ("Sin MT5 real", "#6db7ff"),
-            ("Sin Telegram/TradingView", "#6db7ff"),
+            ("approved_for_real = False",    "#ff6b6b"),
+            ("Sin MT5 real",                 "#6db7ff"),
+            ("Sin Telegram/TradingView",     "#6db7ff"),
         ]
-        
+
         for text, color in badge_styles:
             badge = tk.Label(
                 badges_frame,
@@ -607,11 +862,11 @@ class AcademicDemoGUI:
                 pady=4
             )
             badge.pack(side=tk.LEFT, padx=5)
-        
+
         # ── Selector de archivo ───────────────────────────────────────────────
         file_frame = tk.Frame(self.root, bg="#070b16")
         file_frame.pack(fill=tk.X, padx=20, pady=10)
-        
+
         tk.Label(
             file_frame,
             text="Informe MT5:",
@@ -619,10 +874,10 @@ class AcademicDemoGUI:
             fg="#c9d8ea",
             bg="#070b16"
         ).pack(anchor=tk.W)
-        
+
         file_input_frame = tk.Frame(file_frame, bg="#070b16")
         file_input_frame.pack(fill=tk.X, pady=(5, 0))
-        
+
         tk.Entry(
             file_input_frame,
             textvariable=self.selected_file,
@@ -633,7 +888,7 @@ class AcademicDemoGUI:
             relief=tk.FLAT,
             width=60
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-        
+
         tk.Button(
             file_input_frame,
             text="Seleccionar...",
@@ -645,7 +900,7 @@ class AcademicDemoGUI:
             padx=15,
             pady=5
         ).pack(side=tk.LEFT)
-        
+
         # ── Pipeline Steps ───────────────────────────────────────────────────
         pipeline_label = tk.Label(
             self.root,
@@ -655,18 +910,47 @@ class AcademicDemoGUI:
             bg="#070b16"
         )
         pipeline_label.pack(anchor=tk.W, padx=20, pady=(15, 10))
-        
-        steps_container = tk.Frame(self.root, bg="#070b16")
-        steps_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 15))
-        
+
+        # ── Contenedor desplazable para Pipeline Steps ──────────────────────
+        scroll_frame = tk.Frame(self.root, bg="#070b16")
+        scroll_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 15))
+
+        canvas = tk.Canvas(scroll_frame, bg="#070b16", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(scroll_frame, orient="vertical", command=canvas.yview)
+
+        steps_container = tk.Frame(canvas, bg="#070b16")
+
+        steps_container.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas_window = canvas.create_window((0, 0), window=steps_container, anchor="nw")
+
+        def _configure_canvas_width(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+
+        canvas.bind("<Configure>", _configure_canvas_width)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        canvas.bind('<Enter>', lambda e: canvas.bind_all("<MouseWheel>", _on_mousewheel))
+        canvas.bind('<Leave>', lambda e: canvas.unbind_all("<MouseWheel>"))
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
         for step_num, step_name, step_desc in self.PIPELINE_STEPS:
             step_frame = self._create_step_frame(steps_container, step_num, step_name, step_desc)
             self.step_frames.append(step_frame)
-        
+
         # ── Botón de ejecutar ───────────────────────────────────────────────
         button_frame = tk.Frame(self.root, bg="#070b16")
         button_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
-        
+
         self.execute_button = tk.Button(
             button_frame,
             text="▶ Ejecutar análisis",
@@ -680,7 +964,7 @@ class AcademicDemoGUI:
             cursor="hand2"
         )
         self.execute_button.pack()
-        
+
         # ── Status bar ───────────────────────────────────────────────────────
         self.status_label = tk.Label(
             self.root,
@@ -690,12 +974,12 @@ class AcademicDemoGUI:
             bg="#070b16"
         )
         self.status_label.pack(side=tk.BOTTOM, pady=10)
-        
+
     def _create_step_frame(self, parent, step_num, step_name, step_desc):
         """Crea un frame para cada paso del pipeline."""
         frame = tk.Frame(parent, bg="#111a2b", bd=1, relief=tk.SOLID)
         frame.pack(fill=tk.X, pady=4)
-        
+
         # Número de paso
         num_label = tk.Label(
             frame,
@@ -706,11 +990,11 @@ class AcademicDemoGUI:
             width=3
         )
         num_label.pack(side=tk.LEFT, padx=10, pady=12)
-        
+
         # Información del paso
         info_frame = tk.Frame(frame, bg="#111a2b")
         info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=10)
-        
+
         name_label = tk.Label(
             info_frame,
             text=step_name,
@@ -719,7 +1003,7 @@ class AcademicDemoGUI:
             bg="#111a2b"
         )
         name_label.pack(anchor=tk.W)
-        
+
         desc_label = tk.Label(
             info_frame,
             text=step_desc,
@@ -728,11 +1012,11 @@ class AcademicDemoGUI:
             bg="#111a2b"
         )
         desc_label.pack(anchor=tk.W)
-        
+
         # Estado del paso (espacio para indicador)
         status_frame = tk.Frame(frame, bg="#111a2b", width=80)
         status_frame.pack(side=tk.RIGHT, padx=10, fill=tk.Y)
-        
+
         status_label = tk.Label(
             status_frame,
             text="⏳",
@@ -740,37 +1024,38 @@ class AcademicDemoGUI:
             bg="#111a2b"
         )
         status_label.pack(expand=True)
-        
+
         # Guardar referencias para actualizar
         frame.status_label = status_label
-        frame.num_label = num_label
-        frame.name_label = name_label
-        
+        frame.num_label    = num_label
+        frame.name_label   = name_label
+
         return frame
-        
+
     def _select_file(self):
-        """Abre un diálogo para seleccionar el archivo MT5."""
+        """Abre un diálogo para seleccionar el archivo MT5 y almacena la ruta."""
         filetypes = (
             ("HTML files", "*.html *.htm"),
-            ("All files", "*.*")
+            ("All files",  "*.*")
         )
-        
+
         filename = filedialog.askopenfilename(
             title="Seleccionar informe MT5",
             initialdir=str(TEST_DATA_DIR),
             filetypes=filetypes
         )
-        
+
         if filename:
-            self.selected_file.set(filename)
-            
+            self.selected_report_path = filename          # ← guardar ruta real
+            self.selected_file.set(filename)             # ← actualizar Entry
+
     def _update_step(self, step_num, status):
         """Actualiza el estado visual de un paso."""
         if step_num < 1 or step_num > len(self.step_frames):
             return
-            
+
         frame = self.step_frames[step_num - 1]
-        
+
         if status == "running":
             frame.status_label.config(text="🔄", fg="#6db7ff")
             frame.num_label.config(fg="#6db7ff")
@@ -782,24 +1067,24 @@ class AcademicDemoGUI:
         elif status == "error":
             frame.status_label.config(text="✗", fg="#ff6b6b")
             frame.num_label.config(fg="#ff6b6b")
-            
+
     def _gui_callback(self, step_num, step_name, status):
         """Callback para actualizar la GUI durante la ejecución."""
         self.root.update_idletasks()
         self._update_step(step_num, status)
-        
+
         if status == "running":
             self.status_label.config(text=f"Ejecutando: {step_name}")
         elif status == "done":
             self.status_label.config(text=f"Completado: {step_name}")
         elif status == "error":
             self.status_label.config(text=f"Error en: {step_name}", fg="#ff6b6b")
-            
+
     def _run_analysis(self):
-        """Ejecuta el pipeline de análisis."""
+        """Ejecuta el pipeline de análisis usando el informe seleccionado."""
         self.execute_button.config(state=tk.DISABLED, text="Ejecutando...", bg="#456d9b")
         self.status_label.config(text="Iniciando pipeline...", fg="#8fa3bf")
-        
+
         # Resetear todos los pasos
         for i in range(len(self.step_frames)):
             self._update_step(i + 1, "waiting")
@@ -807,47 +1092,45 @@ class AcademicDemoGUI:
             frame.status_label.config(text="⏳")
             frame.num_label.config(fg="#456d9b")
             frame.name_label.config(fg="#e9eef7")
-        
-        # Ejecutar en un hilo separado para no bloquear la GUI
+
+        # Capturar la ruta seleccionada antes de lanzar el hilo
+        report_path = self.selected_report_path
+
         def run_in_thread():
             try:
-                results = run_pipeline(gui_callback=self._gui_callback)
-                
-                # Abrir el resultado en el navegador
-                self.root.after(0, lambda: self._open_result())
-                
+                # ← pasar la ruta real al pipeline
+                run_pipeline(report_path=report_path, gui_callback=self._gui_callback)
+                self.root.after(0, self._open_result)
             except Exception as e:
                 error_msg = str(e)
                 self.root.after(0, lambda msg=error_msg: self._show_error(msg))
-                
+
         import threading
         thread = threading.Thread(target=run_in_thread, daemon=True)
         thread.start()
-        
+
     def _open_result(self):
         """Abre el resultado HTML en el navegador."""
         self.status_label.config(text="Pipeline completado. Abriendo resultado...", fg="#2ce59b")
         self.execute_button.config(state=tk.NORMAL, text="▶ Ejecutar análisis", bg="#2ce59b")
-        
-        # Abrir en navegador
+
         webbrowser.open(OUTPUT_HTML.as_uri())
-        
+
         messagebox.showinfo(
             "Demo Académica",
             f"Pipeline completado exitosamente.\n\n"
             f"El resultado se ha abierto en tu navegador.\n"
             f"Archivo: {OUTPUT_HTML}"
         )
-        
+
     def _show_error(self, error_msg):
-        """Muestra un mensaje de error."""
+        """Muestra un mensaje de error y marca los pasos en rojo."""
         self.status_label.config(text=f"Error: {error_msg}", fg="#ff6b6b")
         self.execute_button.config(state=tk.NORMAL, text="▶ Ejecutar análisis", bg="#2ce59b")
-        
-        # Marcar todos los pasos como error
+
         for i in range(len(self.step_frames)):
             self._update_step(i + 1, "error")
-            
+
         messagebox.showerror("Error en la ejecución", f"Se produjo un error:\n\n{error_msg}")
 
 
