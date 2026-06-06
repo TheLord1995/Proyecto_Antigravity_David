@@ -1,6 +1,9 @@
 # 🗺️ Roadmap y Bitácora General del Proyecto
 ### Laboratorio de Trading Automatizado
 
+> [!NOTE]
+> **Aclaración Histórica:** Este documento constituye un registro cronológico de las sesiones de desarrollo del proyecto. Los flujos descritos en las sesiones iniciales (tales como la orquestación con n8n y el uso directo de DeepSeek en local) corresponden a etapas experimentales previas (Fase Vortex). La arquitectura actual del ecosistema está centralizada en FastAPI Core, orquestada y dirigida bajo el entorno principal de Google Antigravity.
+
 > **Propósito:** Este documento mantiene un registro determinista de todas las acciones, decisiones y progresos realizados por el usuario y Antigravity. Garantiza la trazabilidad total del proyecto.
 
 ---

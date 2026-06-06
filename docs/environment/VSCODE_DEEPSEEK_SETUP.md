@@ -2,13 +2,10 @@
 
 ## Estado: ✅ Funcionando
 
-**Fecha:** [Añade la fecha actual]
-
 ### Herramientas configuradas
-- **Editor principal:** VS Code
-- **IA asistente:** DeepSeek (vía API)
-- **Extensión:** Continue
-- **IDE secundario:** Antigravity (modelos gratuitos Gemini/Claude)
+- **Entorno de Dirección Principal:** Google Antigravity (modelos Gemini/Claude nativos para planificación, arquitectura y validación)
+- **Entorno de Desarrollo Local Auxiliar:** VS Code
+- **IA Asistente local:** Modelos externos de bajo coste (DeepSeek Chat, MiniMax M2) conectados vía OpenRouter
 
 ### Flujo de trabajo recomendado
 

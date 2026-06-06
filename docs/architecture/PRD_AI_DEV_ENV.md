@@ -1,7 +1,7 @@
 # 📘 PRD: Entorno de Desarrollo Asistido por IA & Roadmap de Automatización
 
 ## 1. Objetivo del Módulo
-Definir la arquitectura de desarrollo local para la fase de codificación, backtesting y automatización de estrategias de trading. Se integra **Visual Studio Code** con la extensión **Cline** y el proveedor **OpenRouter** para actuar como agente de desarrollo autónomo, complementando la infraestructura central de **Antigravity** sin sustituirla.
+Definir la arquitectura de desarrollo local para la fase de codificación, backtesting y automatización de estrategias de trading. Se integra **Visual Studio Code** como entorno de desarrollo local auxiliar y el proveedor **OpenRouter** para conectar con modelos de apoyo (DeepSeek Chat, MiniMax M2), complementando la infraestructura central y de orquestación de **Google Antigravity**, que actúa como Director y Orquestador principal del ecosistema.
 
 ## 2. Justificación Técnica: Migración de Continue a Cline
 
@@ -16,11 +16,10 @@ Definir la arquitectura de desarrollo local para la fase de codificación, backt
 **Conclusión:** Cline se selecciona como motor de desarrollo principal porque reduce la fricción humana en tareas repetitivas de codificación, mantiene la coherencia con la arquitectura de Antigravity y acelera el ciclo de prueba-error en lenguajes estrictos (MQL5, Pine Script v5).
 
 ## 3. Integración con la Arquitectura Antigravity
-- **Antigravity** actúa como núcleo arquitectónico: gestión de datos, lógica de negocio, endpoints FastAPI, túneles Cloudflare y orquestación de servicios.
-- **Cline + OpenRouter** actúa como capa de desarrollo asistido:
-  - Indexación local (`@codebase`) para que el agente comprenda la estructura de carpetas, convenciones de nombres y dependencias existentes.
-  - Generación y refactorización de scripts de estrategias, indicadores y conectores sin romper la integración con el puente API.
-  - Sincronización de cambios mediante aprobación explícita (`Plan → Act`), garantizando control humano sobre modificaciones críticas.
+- **Google Antigravity** actúa como Director, Orquestador Principal y Entorno de Dirección: asistencia técnica, planificación, implementación controlada, supervisión arquitectónica y validación técnica.
+- **VS Code + OpenRouter** actúa como entorno de desarrollo local auxiliar:
+  - Codificación, backtesting local, depuración y desarrollo rápido de scripts usando modelos de bajo coste (DeepSeek Chat, MiniMax M2) conectados vía OpenRouter.
+  - Sincronización de cambios bajo control explícito del Director del proyecto.
 
 ## 4. Estrategia de Modelos y Routing (OpenRouter)
 Se ha configurado un routing híbrido **FREE/Pago** para garantizar continuidad de desarrollo con coste cercano a cero, priorizando estabilidad y rendimiento en coding y análisis financiero.
@@ -68,4 +67,4 @@ El proyecto se encuentra en fase de desarrollo activo. Las próximas iteraciones
 | Rate limits en modelos FREE | Bloqueo temporal de desarrollo | Fallback automático a backup de pago ultra-económico (~$0.14/M) |
 | Deriva de contexto en estrategias | Código inconsistente con Antigravity | Uso obligatorio de `@codebase` + revisión de diffs antes de aceptar cambios |
 | Overfitting en backtests | Estrategia no válida en live | Validación cruzada, out-of-sample testing y límites de drawdown predefinidos |
-| Dependencia de proveedor externo | Interrupción de servicio | Configuración multi-modelo + posibilidad de despliegue local (Ollama) como contingencia |
+| Dependencia de proveedor externo | Interrupción de servicio | Configuración multi-modelo (APIs de respaldo en la nube). Los modelos locales se descartan por directriz de hardware. |

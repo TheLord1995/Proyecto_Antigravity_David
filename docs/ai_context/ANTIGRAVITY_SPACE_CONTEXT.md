@@ -58,27 +58,26 @@ Implementado:
 - FastAPI Core.
 - SQLite.
 - Settings & Safety Locks.
-- RiskEngine determinista.
-- Strategy Validation Framework.
-- Metrics Standard.
+- RiskEngine determinista (7/7 tests passed).
 - Strategy Models Pydantic.
+- Strategy Validation Framework.
 - BacktestValidator.
 - MT5 HTML Backtest Import Layer.
 - MT5HtmlParser para informes HTML en inglés.
 - SHA-256 Traceability.
-- Metrics Engine determinista.
+- Metrics Engine determinista (Sortino, Expectancy, Max Daily Loss).
+- Monte Carlo & Risk of Ruin (Simulaciones de remuestreo Bootstrap/Shuffle).
+- AI Validator Design & Contracts (MockAIValidator y arquitectura de adaptadores).
 - Tests unitarios con pytest.
 - GitHub y control de versiones.
 
 Última batería global conocida:
-- 54 tests pasados.
+- 117 tests pasados.
 - 0 fallos.
 
 Pendiente:
-- Monte Carlo.
-- Risk of Ruin.
-- Metrics Engine avanzado.
-- AI Validator.
+- RemoteAPIValidator (Integración remota del AI Validator con APIs en la nube, e.g. OpenRouter/Gemini/Claude).
+- Approval Layer (Interfaz de usuario y flujo de aprobación manual, Fase 4.5).
 - Telegram Approval Layer.
 - Gatekeeper MT5.
 - Kill Switch.

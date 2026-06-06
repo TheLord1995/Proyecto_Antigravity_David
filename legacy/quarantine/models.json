@@ -1,0 +1,6 @@
+{
+    "trading": "gemma4:e4b",
+    "coding": "qwen3.5:4b",
+    "automation": "qwen3.5:4b",
+    "data": "gemma4:e2b"
+}

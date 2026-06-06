@@ -2,7 +2,7 @@
 
 ## 📋 Resumen del Roadmap
 
-El proyecto Antigravity sigue una hoja de ruta modular estricta. Actualmente se ha completado hasta la **Fase 4.2A (Metrics Engine Determinista)**, integrando ingesta segura de reportes MT5, validación estricta, y cálculo matemático avanzado de métricas deterministas. Las siguientes fases abordarán el análisis estocástico, la validación cualitativa (IA) y la conectividad controlada.
+El proyecto Antigravity sigue una hoja de ruta modular estricta. Actualmente se ha completado hasta la **Fase 4.4 (AI Validator Contracts & Mock)**, integrando ingesta segura de reportes MT5, cálculo matemático avanzado (Metrics Engine), análisis estocástico (Monte Carlo & Risk of Ruin), y la arquitectura por adaptadores del validador de IA (con implementación Mock local). Las siguientes fases abordarán la integración remota con APIs de IA, la interfaz de aprobación humana y la conectividad controlada.
 
 ---
 
@@ -14,9 +14,11 @@ Fase 2: Riesgo y Framework          ✅ COMPLETADO
 Fase 3: Validación Académica        ✅ COMPLETADO
 Fase 4.1: MT5 Import Layer          ✅ COMPLETADO
 Fase 4.2A: Metrics Engine Base      ✅ COMPLETADO
+Fase 4.2B: Monte Carlo & Risk Ruin  ✅ COMPLETADO
+Fase 4.3 & 4.4: AI Contracts/Mock   ✅ COMPLETADO
 ────────────────────────────────────────────────────────
-Fase 4.2B: Monte Carlo & Risk Ruin  🔜 PRÓXIMO
-Fase 4.3: AI Validator              📅 PLANIFICADO
+Fase 4.4B: RemoteAPIValidator       🔜 PRÓXIMO
+Fase 4.5: Approval Layer            📅 PLANIFICADO
 Fase 5.1: Telegram Approval Layer   📅 PLANIFICADO
 Fase 5.2: Kill Switch               📅 PLANIFICADO
 Fase 6.1: Paper Trading Sandbox     📅 PLANIFICADO
@@ -28,28 +30,41 @@ Fase 8: Ejecución Real              🔒 BLOQUEADO
 
 ---
 
-## 🔜 Fase 4.2B: Monte Carlo & Risk of Ruin
+## ✅ Fase 4.2B: Monte Carlo & Risk of Ruin (COMPLETADA)
 
 ### Descripción
 Evolución del Metrics Engine para calcular métricas estocásticas avanzadas que requieran simulaciones de remuestreo.
 
 ### Objetivos
-- [ ] Algoritmo de simulación Monte Carlo sobre la lista de transacciones.
-- [ ] Cálculo probabilístico de Risk of Ruin.
-- [ ] Integración condicional en el BacktestValidator para aplicar umbrales probabilísticos.
+- [x] Algoritmo de simulación Monte Carlo sobre la lista de transacciones.
+- [x] Cálculo probabilístico de Risk of Ruin.
+- [x] Integración condicional en el BacktestValidator para aplicar umbrales probabilísticos.
 
 ---
 
-## 📅 Fase 4.3: AI Validator
+## ✅ Fase 4.3 & 4.4: AI Validator Design & Contracts (COMPLETADA)
 
 ### Descripción
 Módulo de validación cualitativa que utiliza agentes IA para analizar contextos operativos antes de aprobar estrategias o transacciones.
 
 ### Objetivos
-- [ ] Integrar con LLM local (Ollama)
-- [ ] Crear prompt de validación de trades y sesgos
-- [ ] Implementar endpoint `/ai/validate`
-- [ ] Logging de análisis IA
+- [x] Establecer arquitectura de adaptadores desacoplada (Mock, RemoteAPI, OllamaRemote para VPS futuro).
+- [x] Diseñar e implementar contratos de datos Pydantic (AIValidatorInput y AIValidatorResult).
+- [x] Crear el validador offline MockAIValidator para depuración y testeo sin red.
+- [x] Tests unitarios con 100% de cobertura y bloqueo estricto de approved_for_real.
+
+---
+
+## 🔜 Fase 4.4B: RemoteAPIValidator
+
+### Descripción
+Conexión remota del validador de IA con APIs de inteligencia artificial gestionadas en la nube (e.g. OpenRouter/Gemini/Claude).
+
+### Objetivos
+- [ ] Implementar adaptador `RemoteAPIValidator` en `core/ai_validator.py`.
+- [ ] Conectar con OpenRouter, Gemini o Claude a través de llamadas HTTP seguras.
+- [ ] Diseñar prompts de validación técnica de mercado (análisis fundamental, noticias y volumen).
+- [ ] Registrar la latencia y la clave de modelo utilizada en el log.
 
 ---
 

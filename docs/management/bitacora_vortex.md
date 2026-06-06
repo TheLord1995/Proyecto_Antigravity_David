@@ -1,6 +1,9 @@
 # 🗺️ Bitácora de Estrategia: Blacksheep Vortex
 ### Laboratorio de Trading Automatizado
 
+> [!NOTE]
+> **Aclaración Histórica:** La estrategia Blacksheep Vortex ha sido **descartada definitivamente** de la operativa tras pruebas de backtesting negativas (ver detalles en este documento). Los flujos de automatización descritos corresponden al pipeline experimental anterior (Fase Vortex). El core activo y las políticas de riesgo se gestionan de forma determinista y segura en FastAPI Core bajo la dirección de Google Antigravity.
+
 > **Propósito:** Este documento mantiene un registro determinista de todas las acciones, decisiones y progresos específicos para la estrategia **Blacksheep Vortex**. Sigue el ciclo de vida estándar del proyecto.
 
 ---

@@ -26,7 +26,7 @@ Este proyecto fue desarrollado para demostrar:
 El proyecto Antigravity se concibe como un ecosistema integral de trading algorítmico estructurado en tres componentes:
 
 - **Bot Algorítmico**: Receptor y enrutador de señales técnicas basadas en indicadores (e.g., TradingView vía webhooks y orquestación con n8n). En esta fase académica, actúa como el emisor de los intentos de operación (`TradeIntent`).
-- **Agente IA**: Componente en fase de diseño/roadmap que utilizará LLMs locales (como Ollama) para la validación contextual de operaciones, análisis cualitativo y generación de explicaciones de mercado.
+- **Agente IA**: Componente en fase de diseño/roadmap que utilizará adaptadores de LLM en la nube (como OpenRouter, Gemini o Claude) y modelos remotos en VPS dedicado (como Ollama) para la validación contextual de operaciones, análisis cualitativo y generación de explicaciones de mercado (Fase 4.4 implementada con adaptadores Mock locales para desarrollo).
 - **Ecosistema**: El núcleo base desarrollado en FastAPI, el motor determinista **RiskEngine** que aplica reglas de seguridad estrictas de forma local, el framework de validación de estrategias y backtests, y la base de datos **SQLite** para persistir la bitácora de auditoría.
 
 ### Diagrama de Arquitectura Maestro
@@ -318,7 +318,7 @@ Este proyecto **NO** incluye (por diseño):
 - ❌ Telegram Bot funcional.
 - ❌ Paper Trading completo (Sandbox).
 - ❌ Integración con n8n.
-- ❌ AI Validator.
+- ❌ AI Validator (Integración remota de producción en tiempo real; los contratos e implementación Mock local de la Fase 4.4 están activos).
 
 Estas funcionalidades están planificadas para fases futuras, pero **la ejecución real permanecerá bloqueada** permanentemente por razones de seguridad financiera y académica.
 

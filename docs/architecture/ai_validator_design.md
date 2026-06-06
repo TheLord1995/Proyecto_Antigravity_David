@@ -213,7 +213,7 @@ parseable de forma determinista por el pipeline, sin dependencia de formato libr
   ],
   "recommended_action": "PROCEED_TO_HUMAN_REVIEW",
   "requires_human_review": true,
-  "model_used": "ollama/qwen2.5:7b",
+  "model_used": "MockAIValidator",
   "model_latency_ms": 1240,
   "approved_for_real": false,
   "evaluated_at": "2026-05-31T20:00:00Z"
@@ -233,7 +233,7 @@ parseable de forma determinista por el pipeline, sin dependencia de formato libr
 | `risk_notes` | `list[str]` | Observaciones de riesgo adicionales detectadas por la IA. Puede estar vacía. |
 | `recommended_action` | `str` | Acción recomendada al pipeline. Ver valores en Sección 4.3. Nunca implica ejecución automática. |
 | `requires_human_review` | `bool` | `true` si la ambigüedad o contradicción detectada requiere revisión manual obligatoria. |
-| `model_used` | `str` | Identificador del modelo LLM que generó el análisis (e.g., `"ollama/qwen2.5:7b"`). |
+| `model_used` | `str` | Identificador del modelo LLM que generó el análisis (e.g., `"MockAIValidator"` o `"google/gemini-2.5-flash"`). |
 | `model_latency_ms` | `int \| null` | Tiempo de respuesta del modelo en milisegundos. `null` si no se pudo medir. |
 | `approved_for_real` | `bool` | Constante de seguridad. **Siempre `False`. Inmutable.** |
 | `evaluated_at` | `datetime` | Timestamp UTC de cuando se generó el resultado. |
@@ -373,7 +373,7 @@ de todas las capas previas del pipeline.
 │  Exposición diaria: 0.8%        │  Trades abiertos: 1/3            │
 ├─────────────────────────────────────────────────────────────────────┤
 │  AI VALIDATOR                   │  VEREDICTO: ⚠️ WEAK_CONTEXT      │
-│  Modelo: ollama/qwen2.5:7b      │  Confianza: 0.61                 │
+│  Modelo: MockAIValidator        │  Confianza: 0.61                 │
 │  Latencia: 1.2s                 │                                  │
 │                                                                     │
 │  Razones:                                                           │
@@ -414,13 +414,16 @@ de todas las capas previas del pipeline.
 Se analizan las opciones de modelos de lenguaje para la futura implementación del AI Validator.
 **Ninguno está integrado ni conectado en esta fase.**
 
+> [!WARNING]
+> **Directriz de Modelos Locales:** De acuerdo con el estado oficial del proyecto, **no se utilizan ni se requieren modelos locales (como Ollama) en la arquitectura activa**. Las opciones locales listadas a continuación se consideran exclusivamente para el Roadmap Futuro sujeto a disponibilidad de VPS privado de pago, y actualmente están en cuarentena.
+
 ### 9.1 Tabla comparativa de modelos candidatos
 
 | Modelo | Proveedor | Modo | Ventajas | Desventajas |
 |:---|:---|:---|:---|:---|
-| **Qwen2.5:7b / Qwen3:8b** | Alibaba / Ollama | Local | Sin coste, sin red, privacidad total, sin latencia de red | Menor capacidad de razonamiento complejo que modelos grandes |
-| **Llama 3.1 / 3.2** | Meta / Ollama | Local | Open source, sin dependencias externas, community amplia | Razonamiento técnico-financiero limitado en versiones pequeñas |
-| **Gemma 3** | Google / Ollama | Local | Optimizado para inferencia eficiente, buen rendimiento en hardware modesto | Menor contexto y capacidad analítica que Llama en modelos pequeños |
+| **Qwen2.5:7b / Qwen3:8b** | Alibaba / Ollama | Local (Roadmap) | Sin coste, sin red, privacidad total, sin latencia de red | Menor capacidad de razonamiento complejo que modelos grandes |
+| **Llama 3.1 / 3.2** | Meta / Ollama | Local (Roadmap) | Open source, sin dependencias externas, community amplia | Razonamiento técnico-financiero limitado en versiones pequeñas |
+| **Gemma 3** | Google / Ollama | Local (Roadmap) | Optimizado para inferencia eficiente, buen rendimiento en hardware modesto | Menor contexto y capacidad analítica que Llama en modelos pequeños |
 | **GPT-4o / GPT-4o-mini** | OpenAI | API externa | Alta capacidad analítica, excelente seguimiento de instrucciones JSON | Coste por token, latencia de red, dependencia externa, privacidad |
 | **Claude Sonnet / Haiku** | Anthropic | API externa | Excelente en razonamiento estructurado y seguimiento de instrucciones | Coste por token, latencia de red, dependencia externa |
 | **Gemini Flash / Pro** | Google | API externa | Contexto muy largo, buen rendimiento en análisis estructurado | Coste por token, latencia de red, dependencia externa |

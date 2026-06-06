@@ -2,7 +2,7 @@
 
 ## 1. Objetivo del Proyecto
 
-**Antigravity** es un ecosistema de trading algorítmico asistido por inteligencia artificial, diseñado para automatizar el flujo completo de señales de trading: desde la recepción de señales hasta la validación de riesgo y la posible ejecución en cuenta demo.
+**Antigravity** es un ecosistema de trading algorítmico asistido por inteligencia artificial, orquestado y dirigido bajo el entorno principal de **Google Antigravity** (asistencia técnica, planificación, supervisión arquitectónica e implementación controlada), diseñado para automatizar el flujo completo de señales de trading: desde la recepción de señales hasta la validación de riesgo y la posible ejecución en cuenta demo.
 
 ### Propósito Académico
 
@@ -17,7 +17,7 @@ El proyecto tiene un doble propósito:
 | Concepto | Descripción | Rol en Antigravity |
 |----------|-------------|-------------------|
 | **Bot Algorítmico** | Programa que ejecuta reglas predefinidas de trading basadas en indicadores técnicos | No implementado directamente; se integra vía webhooks de TradingView |
-| **Agente IA** | Sistema basado en inteligencia artificial que toma decisiones, aprende y se adapta | En desarrollo (Fase 2.x); uso de LLMs locales para análisis y documentación |
+| **Agente IA** | Sistema basado en inteligencia artificial que asiste en el análisis y genera explicaciones contextuales | Fase 4.4 completada (contratos y adaptadores con Mock local, integración remota planificada) |
 | **Ecosistema** | Conjunto integrado de componentes que trabajan juntos (API, Base de Datos, Reglas de Riesgo, UI) | **Implementado**: FastAPI + RiskEngine + SQLite + Documentación |
 
 ---
@@ -70,28 +70,32 @@ El proyecto tiene un doble propósito:
 
 ## 4. Flujo Previsto (Pipeline Completo)
 
+El flujo de procesamiento de señales del ecosistema sigue la siguiente secuencia estricta y unidireccional:
+
 ```
-TradingView Signal ──▶ n8n (orquestación) ──▶ Gatekeeper API ──▶ RiskEngine
-                                                                         │
-                                                                         ▼
-                                                             ┌───────────────┐
-                                                             │ EVALUACIÓN    │
-                                                             │ DE RIESGO     │
-                                                             └───────────────┘
-                                                                         │
-                                              ┌──────────────────────────┘
-                                              ▼
-                                      ┌───────────────┐
-                                      │ APROBADO?     │
-                                      └───────────────┘
-                                         │          │
-                                        SÍ          NO
-                                         │          │
-                                         ▼          ▼
-                                  ┌───────────┐  ┌─────────┐
-                                  │  MT5      │  │ BLOQUEADO│
-                                  │ (Demo)    │  │ (Log)    │
-                                  └───────────┘  └─────────┘
+[ Signal Parser / Webhook ]
+        │  (Ingesta de datos y firma criptográfica SHA-256)
+        ▼
+[ Metrics Engine ]
+        │  (Recálculo determinista de Sortino, Expectancy, etc.)
+        ▼
+[ Monte Carlo Engine ]
+        │  (Simulaciones estocásticas y validación de confianza)
+        ▼
+[ BacktestValidator ]
+        │  (Evaluación lógica y aplicación de regla de confianza D4)
+        ▼
+[ AI Validator (Mock / Cloud) ]
+        │  (Análisis semántico del contexto técnico y justificación)
+        ▼
+[ RiskEngine ]
+        │  (Filtro supremo de seguridad: reglas deterministas R1-R6)
+        ▼
+[ Approval Layer ]
+        │  (Aprobación/Rechazo manual del operador humano)
+        ▼
+[ Gatekeeper MT5 (Demo) ]
+        │  (Envío controlado de órdenes a la terminal virtual)
 ```
 
 **Nota**: El flujo completo (MT5, Gatekeeper, Telegram, n8n) NO está implementado en esta entrega académica. Solo está implementado el núcleo (FastAPI + RiskEngine).

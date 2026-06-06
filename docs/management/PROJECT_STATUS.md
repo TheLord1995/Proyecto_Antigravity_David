@@ -8,9 +8,9 @@ Este proyecto se está desarrollando con ayuda de Google Antigravity como entorn
 
 | Métrica | Valor |
 |---------|-------|
-| **Versión Core** | 1.3.0 |
-| **Fase Actual** | 4.2A (Metrics Engine Determinista) |
-| **Tests Globales** | 54/54 ✅ |
+| **Versión Core** | 1.4.0 |
+| **Fase Actual** | 4.4 (AI Validator Contracts & Mock) |
+| **Tests Globales** | 117/117 ✅ |
 | **Estado** | En desarrollo activo |
 
 ---
@@ -47,22 +47,36 @@ Este proyecto se está desarrollando con ayuda de Google Antigravity como entorn
 - [x] Sortino Ratio (trade-based)
 - [x] Enriquecimiento determinista de BacktestReport
 
+### Fase 4.2B: Monte Carlo & Risk of Ruin
+- [x] Motor de simulación estocástica por remuestreo (Bootstrap y Shuffle)
+- [x] Cálculo de Risk of Ruin y percentiles de drawdown (p50, p95, p99)
+- [x] Integración de regla de degradación por baja confianza (Regla D4)
+- [x] Suite de pruebas deterministas con seed fija (12 tests)
+
+### Fase 4.3 & 4.4: AI Validator Design & Contracts
+- [x] Diseño arquitectónico de adaptadores (ABC de integración)
+- [x] Definición de contratos de datos Pydantic (AIValidatorInput y AIValidatorResult)
+- [x] Implementación de MockAIValidator local y offline para validación semántica
+- [x] Tests unitarios dedicados e inmutabilidad de approved_for_real (50 tests)
+
 ---
 
 ## 🧪 Módulos Validados
 
 | Módulo | Tests | Estado |
-|--------|-------|--------|
+|--------|--------|--------|
 | **RiskEngine** | 7/7 | ✅ VALIDADO |
 | **Strategy Models** | 8/8 | ✅ VALIDADO |
 | **BacktestValidator** | 10/10 | ✅ VALIDADO |
 | **MT5HtmlParser** | 29/29 | ✅ VALIDADO |
 | **Metrics Engine** | 7/7 | ✅ VALIDADO |
+| **Monte Carlo Engine** | 12/12 | ✅ VALIDADO |
+| **AI Validator Contracts**| 50/50 | ✅ VALIDADO |
 | **FastAPI /health** | - | ✅ FUNCIONAL |
 | **SQLite Database** | - | ✅ FUNCIONAL |
 | **Settings Security** | - | ✅ FUNCIONAL |
 
-**Resultado consolidado actual:** 54 tests pasados | 0 fallados (pytest).
+**Resultado consolidado actual:** 117 tests pasados | 0 fallados (pytest).
 
 ---
 
@@ -90,16 +104,14 @@ REQUIRE_APPROVAL=True
 ## ❌ Qué NO Hace El Sistema Todavía
 
 ### Funcionalidades Pendientes (Roadmap)
-- ❌ **Monte Carlo & Risk of Ruin** (Fase 4.2B)
-- ❌ **Metrics Engine avanzado**
-- ❌ **Kill Switch**: Botón de parada de emergencia
-- ❌ **Approval Layer**: Sistema de aprobación via Telegram
-- ❌ **AI Validator**: Validación con agentes IA
-- ❌ **Gatekeeper MT5**: Orquestación y acoplamiento con MT5
-- ❌ **Paper Trading Sandbox**: Simulación de trading
-- ❌ **TradingView Integration**: Receptor de webhooks
-- ❌ **n8n auxiliary workflows**: Orquestación con n8n
-- ❌ **Demo execution**: Ejecución real en cuenta demo
+- ❌ **RemoteAPIValidator (Fase 4.4B)**: Conexión remota del validador con APIs en la nube (OpenRouter/Gemini/Claude).
+- ❌ **Approval Layer (Fase 4.5)**: Interfaz de usuario de aprobación manual de señales.
+- ❌ **Kill Switch**: Botón de parada de emergencia.
+- ❌ **Gatekeeper MT5**: Conector a terminales MetaTrader 5 demo.
+- ❌ **Paper Trading Sandbox**: Simulación de trading en cuenta demo.
+- ❌ **TradingView Integration**: Endpoint de webhooks para señales en tiempo real.
+- ❌ **n8n auxiliary workflows**: Flujos auxiliares de notificación.
+- ❌ **Demo execution**: Ejecución real simulada en cuenta demo.
 
 ### Ejecución Real
 La ejecución real sigue **bloqueada por diseño** (`approved_for_real=False`, `ALLOW_REAL_EXECUTION=False`). Cualquier ejecución operativa futura requiere pasar invariablemente por el RiskEngine y el Approval Layer humano.
