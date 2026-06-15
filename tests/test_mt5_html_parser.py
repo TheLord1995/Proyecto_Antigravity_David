@@ -31,7 +31,7 @@ from core.backtest_validator import BacktestValidator, MetricThresholds
 # ─── RUTAS A LOS ARCHIVOS MOCK ───────────────────────────────────────────────
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 _VALID_EN_HTML = os.path.join(_DATA_DIR, "sample_mt5_report_en.html")
-_INVALID_ES_HTML = os.path.join(_DATA_DIR, "sample_mt5_report_es.html")
+_VALID_ES_HTML = os.path.join(_DATA_DIR, "sample_mt5_report_es.html")
 
 # ─── PERÍODOS MOCK REUTILIZABLES ─────────────────────────────────────────────
 _IS_PERIOD = BacktestPeriod(
@@ -127,31 +127,56 @@ class TestT1ParseValidEnglishHtml:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# T2 – RECHAZO DE INFORME NO INGLÉS
+# T2 – RECHAZO DE IDIOMA NO SOPORTADO E INTEGRACIÓN DE ESPAÑOL
 # ═══════════════════════════════════════════════════════════════════════════════
-class TestT2RejectNonEnglishReport:
+class TestT2RejectUnsupportedLanguageReport:
     """
     Verifica que el parser lanza ParserLanguageError cuando el HTML contiene
-    indicadores de idioma distinto al inglés.
+    indicadores de idiomas no soportados (como francés o alemán),
+    y que ahora acepta y procesa informes válidos en español.
     """
 
-    def test_spanish_report_raises_language_error(self):
+    def test_spanish_report_passes_successfully(self):
+        """El informe en español mock debe ser procesado sin lanzar ParserLanguageError."""
+        parser = MT5HtmlParser()
+        report = parser.parse(
+            file_path=_VALID_ES_HTML,
+            strategy_id="ST-TEST-ES",
+            version="1.0",
+            is_period=_IS_PERIOD,
+            oos_period=_OOS_PERIOD,
+        )
+        assert report.total_trades == 300
+        assert report.profit_factor_oos == pytest.approx(2.61, abs=0.01)
+
+    def test_unsupported_language_report_raises_language_error(self, tmp_path):
+        """Un informe con indicadores de francés/alemán debe ser rechazado."""
+        unsupported_html = tmp_path / "french_report.html"
+        unsupported_html.write_text(
+            "<html><body><p>Facteur de profit 1.5</p><p>Total trades 100</p><p>Maximal drawdown 5.0%</p></body></html>",
+            encoding="utf-8",
+        )
         parser = MT5HtmlParser()
         with pytest.raises(ParserLanguageError):
             parser.parse(
-                file_path=_INVALID_ES_HTML,
-                strategy_id="ST-TEST-ES",
+                file_path=str(unsupported_html),
+                strategy_id="ST-TEST-FR",
                 version="1.0",
                 is_period=_IS_PERIOD,
                 oos_period=_OOS_PERIOD,
             )
 
-    def test_error_message_mentions_english_requirement(self):
+    def test_error_message_mentions_english_or_spanish_requirement(self, tmp_path):
+        unsupported_html = tmp_path / "french_report.html"
+        unsupported_html.write_text(
+            "<html><body><p>Facteur de profit 1.5</p><p>Total trades 100</p><p>Maximal drawdown 5.0%</p></body></html>",
+            encoding="utf-8",
+        )
         parser = MT5HtmlParser()
-        with pytest.raises(ParserLanguageError, match="English"):
+        with pytest.raises(ParserLanguageError, match="English or Spanish"):
             parser.parse(
-                file_path=_INVALID_ES_HTML,
-                strategy_id="ST-TEST-ES",
+                file_path=str(unsupported_html),
+                strategy_id="ST-TEST-FR",
                 version="1.0",
                 is_period=_IS_PERIOD,
                 oos_period=_OOS_PERIOD,
@@ -394,3 +419,82 @@ class TestT6BacktestValidatorCompatibility:
         assert evaluation.approved_for_real is False
         assert evaluation.classification in list(StrategyClassification)
         assert evaluation.evaluator == "BacktestValidator-Determinista"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# T7 – PRUEBAS CON INFORMES REALES EN ESPAÑOL / MULTISÍMBOLO Y EXTRA
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestT7RealSpanishReports:
+    """
+    Pruebas utilizando los dos archivos de informes MT5 reales provistos en español:
+    - real_mt5_xauusd_signal_commander_20260526_20260604.html
+    - ReportTester-1650421316_ORB_Multisymbol.html
+    """
+
+    def test_parse_real_xauusd_report(self):
+        fpath = os.path.join(_DATA_DIR, "real_mt5_xauusd_signal_commander_20260526_20260604.html")
+        parser = MT5HtmlParser()
+        report = parser.parse(
+            file_path=fpath,
+            strategy_id="ST-REAL-XAUUSD",
+            version="1.0",
+            is_period=_IS_PERIOD,
+            oos_period=_OOS_PERIOD,
+        )
+        assert report.total_trades == 52
+        assert report.profit_factor_oos == pytest.approx(1.29, abs=0.01)
+        assert report.max_drawdown_pct == pytest.approx(1.09, abs=0.01)
+        assert report.recovery_factor == pytest.approx(0.77, abs=0.01)
+        assert report.sharpe_ratio == pytest.approx(4.44, abs=0.01)
+        assert report.expectancy == pytest.approx(2.13, abs=0.01)
+        assert report.average_win == pytest.approx(16.44, abs=0.01)
+        assert report.average_loss == pytest.approx(17.39, abs=0.01)
+        assert report.win_rate == pytest.approx(57.69, abs=0.01)
+        assert report.max_losing_streak == 4
+
+        # Verificar trazabilidad SHA-256
+        assert report.raw_metrics is not None
+        assert len(report.raw_metrics["source_file_hash"]) == 64
+
+    def test_parse_real_orb_multisymbol_report(self):
+        fpath = os.path.join(_DATA_DIR, "ReportTester-1650421316_ORB_Multisymbol.html")
+        parser = MT5HtmlParser()
+        report = parser.parse(
+            file_path=fpath,
+            strategy_id="ST-REAL-ORB",
+            version="2.0",
+            is_period=_IS_PERIOD,
+            oos_period=_OOS_PERIOD,
+        )
+        assert report.total_trades == 226
+        assert report.profit_factor_oos == pytest.approx(0.75, abs=0.01)
+        assert report.max_drawdown_pct == pytest.approx(0.33, abs=0.01)
+        assert report.recovery_factor == pytest.approx(-0.83, abs=0.01)
+        assert report.sharpe_ratio == pytest.approx(-5.00, abs=0.01)
+        assert report.expectancy == pytest.approx(-0.13, abs=0.01)
+        assert report.average_win == pytest.approx(0.71, abs=0.01)
+        assert report.average_loss == pytest.approx(1.07, abs=0.01)
+        assert report.win_rate == pytest.approx(53.10, abs=0.01)
+        assert report.max_losing_streak == 8
+
+        # Verificar trazabilidad SHA-256
+        assert report.raw_metrics is not None
+        assert len(report.raw_metrics["source_file_hash"]) == 64
+
+    def test_missing_critical_metric_raises_structure_error(self, tmp_path):
+        """Si falta una métrica crítica (ej. Total trades), debe lanzar ParserStructureError."""
+        bad_html = tmp_path / "bad_report.html"
+        # Contiene Profit factor y Maximal drawdown, pero no Total trades ni sus alias
+        bad_html.write_text(
+            "<html><body><p>Profit factor 1.5</p><p>Maximal drawdown 5.0%</p></body></html>",
+            encoding="utf-8",
+        )
+        parser = MT5HtmlParser()
+        with pytest.raises(ParserStructureError, match="Total trades"):
+            parser.parse(
+                file_path=str(bad_html),
+                strategy_id="ST-BAD",
+                version="1.0",
+                is_period=_IS_PERIOD,
+                oos_period=_OOS_PERIOD,
+            )

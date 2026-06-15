@@ -1,14 +1,14 @@
 """
 core/parsers/mt5_html_parser.py
 --------------------------------
-Implementación concreta del parser para informes HTML de MetaTrader 5 en inglés.
+Implementación concreta del parser para informes HTML de MetaTrader 5 en inglés y español.
 Fase 4.1: Import Layer — Única implementación autorizada en esta fase.
 
 Responsabilidades:
-  - Leer archivos HTML locales generados por MT5.
-  - Validar que el idioma sea inglés (English).
+  - Leer archivos HTML locales generados por MT5 (soporta codificación UTF-8 y UTF-16LE).
+  - Validar que el idioma sea inglés o español.
   - Validar que la estructura sea reconocible como un informe MT5.
-  - Extraer métricas directamente del DOM.
+  - Extraer métricas directamente del DOM utilizando alias bilingües.
   - Calcular el hash SHA-256 del archivo original.
   - Construir y retornar un objeto BacktestReport Pydantic.
 
@@ -23,30 +23,55 @@ from bs4 import BeautifulSoup
 from core.parsers.base_parser import BaseParser, ParserLanguageError, ParserStructureError
 from core.strategy_models import BacktestPeriod, BacktestReport
 
-# ─── ANCLAS DE IDENTIDAD MT5 ─────────────────────────────────────────────────
-# Cadenas que DEBEN existir en el HTML para confirmar que es un informe MT5 en inglés.
-_MT5_ENGLISH_ANCHORS = [
-    "Profit factor",
-    "Total trades",
-    "Maximal drawdown",
-]
+# ─── ANCLAS DE IDENTIDAD MT5 BILINGÜES ───────────────────────────────────────
+# Cadenas que confirman la identidad de un informe de MetaTrader 5 en inglés o español.
+_CRITICAL_ANCHORS = {
+    "Profit factor": ["Profit factor", "Factor de Beneficio", "Factor de beneficio"],
+    "Total trades": ["Total trades", "Total de operaciones ejecutadas", "Total de transacciones"],
+    "Maximal drawdown": ["Maximal drawdown", "Reducción máxima del balance", "Reducción máxima de la equidad", "Caída máxima"],
+}
 
-# Cadenas que, si se encuentran, indican que el informe NO está en inglés.
-_NON_ENGLISH_INDICATORS = [
-    "Factor de beneficio",
-    "Total de transacciones",
-    "Caída máxima",
+# Cadenas que indican que el informe está en un idioma no soportado.
+_UNSUPPORTED_LANGUAGE_INDICATORS = [
     "Facteur de profit",
     "Gewinnfaktor",
+]
+
+# Diccionario de alias bilingües para extracción de métricas.
+_METRIC_ALIASES = {
+    "total_trades": ["Total de operaciones ejecutadas", "Total de transacciones", "Total trades"],
+    "profit_factor": ["Factor de Beneficio", "Factor de beneficio", "Profit factor"],
+    "recovery_factor": ["Factor de Recuperación", "Factor de recuperación", "Recovery factor"],
+    "sharpe_ratio": ["Ratio de Sharpe", "Ratio de sharpe", "Sharpe ratio"],
+    "expectancy": ["Beneficio Esperado", "Beneficio esperado", "Expected payoff"],
+    "average_win": ["Promedio de transacción rentable", "Promedio de transacción rentable:", "Average profit trade"],
+    "average_loss": ["Promedio de transacción no rentable", "Promedio de transacción no rentable:", "Average loss trade"],
+    "max_losing_streak": ["El número máximo de pérdidas consecutivas", "El máximo de pérdidas consecutivas", "Maximum consecutive losses"],
+    "net_profit": ["Beneficio Neto", "Total net profit", "Beneficio neto total"],
+    "gross_profit": ["Beneficio Bruto", "Gross profit"],
+    "gross_loss": ["Pérdidas Brutas", "Gross loss"],
+}
+
+_DRAWDOWN_ALIASES = [
+    "Maximal drawdown",
+    "Reducción máxima del balance",
+    "Reducción máxima de la equidad",
+    "Caída máxima",
+]
+
+_WIN_RATE_PATTERNS = [
+    r"Profit trades[\s\S]*?\((\d+[\.,]\d+)%\)",
+    r"Posiciones rentables[\s\S]*?\((\d+[\.,]\d+)%\)",
+    r"Operaciones rentables[\s\S]*?\((\d+[\.,]\d+)%\)",
 ]
 
 
 class MT5HtmlParser(BaseParser):
     """
-    Parser determinista para informes HTML de MetaTrader 5 generados en inglés.
+    Parser determinista para informes HTML de MetaTrader 5 generados en inglés y español.
 
     Lanza:
-        ParserLanguageError:  Si el informe está en un idioma distinto al inglés.
+        ParserLanguageError:  Si el informe está en un idioma distinto a inglés o español.
         ParserStructureError: Si el HTML no corresponde a un informe MT5.
         FileNotFoundError:    Si el archivo no existe.
     """
@@ -60,7 +85,7 @@ class MT5HtmlParser(BaseParser):
         oos_period: BacktestPeriod,
     ) -> BacktestReport:
         """
-        Parsea un informe HTML de MT5 en inglés y retorna un BacktestReport.
+        Parsea un informe HTML de MT5 en inglés o español y retorna un BacktestReport.
         """
         # ── 1. LEER ARCHIVO LOCAL ─────────────────────────────────────────────
         raw_html = self._read_file(file_path)
@@ -117,8 +142,11 @@ class MT5HtmlParser(BaseParser):
     def _read_file(self, file_path: str) -> str:
         """Lee el archivo HTML local. Lanza FileNotFoundError si no existe."""
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                return f.read()
+            with open(file_path, "rb") as f:
+                raw = f.read()
+            # Detección de BOM de UTF-16
+            encoding = "utf-16" if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else "utf-8"
+            return raw.decode(encoding, errors="replace")
         except FileNotFoundError:
             raise FileNotFoundError(
                 f"[MT5HtmlParser] Archivo no encontrado: {file_path}"
@@ -126,108 +154,154 @@ class MT5HtmlParser(BaseParser):
 
     def _validate_language(self, text: str) -> None:
         """
-        Rechaza el informe si contiene indicadores de idiomas distintos al inglés,
-        o si no contiene los anclas obligatorias en inglés.
+        Rechaza el informe si contiene indicadores de idiomas no soportados.
         """
-        for indicator in _NON_ENGLISH_INDICATORS:
+        for indicator in _UNSUPPORTED_LANGUAGE_INDICATORS:
             if indicator in text:
                 raise ParserLanguageError(
-                    f"[MT5HtmlParser] Informe rechazado: idioma no inglés detectado "
+                    f"[MT5HtmlParser] Informe rechazado: idioma no inglés/español detectado "
                     f"(encontrado: '{indicator}'). "
-                    "All MT5 reports must be generated in English."
+                    "MT5 reports must be generated in English or Spanish."
                 )
 
     def _validate_mt5_structure(self, text: str) -> None:
         """
-        Verifica que el HTML contenga las cadenas ancla de un informe MT5 válido.
-        Si alguna falta, el DOM es irreconocible y se lanza ParserStructureError.
+        Verifica que el HTML contenga al menos una de las cadenas ancla para
+        cada una de las categorías críticas de un informe MT5 válido.
+        Si alguna falta, se lanza ParserStructureError.
         """
-        missing = [anchor for anchor in _MT5_ENGLISH_ANCHORS if anchor not in text]
-        if missing:
-            raise ParserStructureError(
-                f"[MT5HtmlParser] Estructura MT5 no reconocida. "
-                f"Etiquetas faltantes: {missing}. "
-                "El archivo puede no ser un informe de MetaTrader 5."
-            )
+        for name, aliases in _CRITICAL_ANCHORS.items():
+            if not any(alias.lower() in text.lower() for alias in aliases):
+                raise ParserStructureError(
+                    f"[MT5HtmlParser] Estructura MT5 no reconocida. "
+                    f"Etiqueta crítica no encontrada: '{name}' (alias buscados: {aliases}). "
+                    "El archivo puede no ser un informe de MetaTrader 5 válido."
+                )
 
     def _extract_metrics(self, soup: BeautifulSoup, text: str) -> dict:
         """
         Extrae las métricas disponibles directamente del DOM HTML del informe MT5.
-        Para métricas no encontradas, asigna valores por defecto seguros (0.0 / 0).
+        Lanza ParserStructureError si falta alguna métrica crítica.
         """
+        # Métricas críticas
+        total_trades = self._extract_int_from_aliases(text, _METRIC_ALIASES["total_trades"], "Total trades")
+        profit_factor_is = self._extract_float_from_aliases(text, _METRIC_ALIASES["profit_factor"], "Profit factor")
+        # Compatibilidad estructural:
+# un informe MT5 estándar no separa automáticamente In Sample / Out of Sample.
+# Por tanto, profit_factor_oos replica temporalmente profit_factor_is.
+# La separación IS/OOS deberá resolverse en una fase posterior mediante
+# particionado explícito del dataset o metadatos externos del backtest.
+        
+        profit_factor_oos = profit_factor_is
+        max_drawdown_pct = self._extract_drawdown_pct_from_aliases(text, _DRAWDOWN_ALIASES)
+
+        # Métricas no críticas (fallback a 0.0 o 0)
+        recovery_factor = self._extract_float_from_aliases(text, _METRIC_ALIASES["recovery_factor"])
+        sharpe_ratio = self._extract_float_from_aliases(text, _METRIC_ALIASES["sharpe_ratio"])
+        expectancy = self._extract_float_from_aliases(text, _METRIC_ALIASES["expectancy"])
+        average_win = self._extract_float_from_aliases(text, _METRIC_ALIASES["average_win"])
+        average_loss = abs(self._extract_float_from_aliases(text, _METRIC_ALIASES["average_loss"]))
+        win_rate = self._extract_win_rate_from_patterns(text, _WIN_RATE_PATTERNS)
+        max_losing_streak = self._extract_int_from_aliases(text, _METRIC_ALIASES["max_losing_streak"])
+
+        # Opcionales bilingües solicitadas por el usuario
+        net_profit = self._extract_float_from_aliases(text, _METRIC_ALIASES["net_profit"])
+        gross_profit = self._extract_float_from_aliases(text, _METRIC_ALIASES["gross_profit"])
+        gross_loss = self._extract_float_from_aliases(text, _METRIC_ALIASES["gross_loss"])
+
         return {
-            "total_trades": self._extract_int(text, "Total trades"),
-            "profit_factor_is": self._extract_float(text, "Profit factor"),
-            "profit_factor_oos": self._extract_float(text, "Profit factor"),
-            "max_drawdown_pct": self._extract_drawdown_pct(text),
-            "recovery_factor": self._extract_float(text, "Recovery factor"),
-            "sharpe_ratio": self._extract_float(text, "Sharpe ratio"),
-            "expectancy": self._extract_float(text, "Expected payoff"),
-            "average_win": self._extract_float(text, "Average profit trade"),
-            "average_loss": self._extract_float_abs(text, "Average loss trade"),
-            "win_rate": self._extract_win_rate(text),
-            "max_losing_streak": self._extract_int(text, "Maximum consecutive losses"),
+            "total_trades": total_trades,
+            "profit_factor_is": profit_factor_is,
+            "profit_factor_oos": profit_factor_oos,
+            "max_drawdown_pct": max_drawdown_pct,
+            "recovery_factor": recovery_factor,
+            "sharpe_ratio": sharpe_ratio,
+            "expectancy": expectancy,
+            "average_win": average_win,
+            "average_loss": average_loss,
+            "win_rate": win_rate,
+            "max_losing_streak": max_losing_streak,
+            "net_profit": net_profit,
+            "gross_profit": gross_profit,
+            "gross_loss": gross_loss,
         }
 
-    def _extract_float(self, text: str, label: str) -> float:
+    def _extract_float_from_aliases(self, text: str, aliases: list[str], critical_name: str = None) -> float:
         """
-        Busca en el texto la línea que contiene el 'label' de MT5 y extrae
+        Busca en el texto la primera coincidencia de un alias y extrae
         el valor numérico inmediatamente siguiente.
         """
-        pattern = re.compile(
-            re.escape(label) + r"[^\d\-]*?([\-]?\d[\d\s]*[\.,]?\d*)",
-            re.IGNORECASE,
-        )
-        match = pattern.search(text)
-        if match:
-            return self._to_float(match.group(1))
+        for alias in aliases:
+            pattern = re.compile(
+                re.escape(alias) + r"[^\d\-]*?([\-]?\d[\d\s]*[\.,]?\d*)",
+                re.IGNORECASE,
+            )
+            match = pattern.search(text)
+            if match:
+                return self._to_float(match.group(1))
+        if critical_name:
+            raise ParserStructureError(
+                f"[MT5HtmlParser] Métrica crítica no encontrada: '{critical_name}'. "
+                f"El informe no contiene ninguna de las etiquetas asociadas: {aliases}"
+            )
         return 0.0
 
-    def _extract_float_abs(self, text: str, label: str) -> float:
-        """Igual que _extract_float pero devuelve el valor absoluto (para pérdidas)."""
-        return abs(self._extract_float(text, label))
-
-    def _extract_int(self, text: str, label: str) -> int:
-        """Extrae un entero tras el label indicado."""
-        pattern = re.compile(
-            re.escape(label) + r"[^\d]*?(\d+)",
-            re.IGNORECASE,
-        )
-        match = pattern.search(text)
-        if match:
-            return int(match.group(1).replace(" ", ""))
+    def _extract_int_from_aliases(self, text: str, aliases: list[str], critical_name: str = None) -> int:
+        """
+        Busca en el texto la primera coincidencia de un alias y extrae
+        el valor entero inmediatamente siguiente.
+        """
+        for alias in aliases:
+            pattern = re.compile(
+                re.escape(alias) + r"[^\d]*?(\d+)",
+                re.IGNORECASE,
+            )
+            match = pattern.search(text)
+            if match:
+                return int(match.group(1).replace(" ", ""))
+        if critical_name:
+            raise ParserStructureError(
+                f"[MT5HtmlParser] Métrica crítica no encontrada: '{critical_name}'. "
+                f"El informe no contiene ninguna de las etiquetas asociadas: {aliases}"
+            )
         return 0
 
-    def _extract_drawdown_pct(self, text: str) -> float:
+    def _extract_drawdown_pct_from_aliases(self, text: str, aliases: list[str]) -> float:
         """
-        Extrae el drawdown relativo (%) de la línea 'Maximal drawdown'.
+        Extrae el drawdown relativo (%) de la primera coincidencia de alias.
         MT5 lo reporta en formato: 'Maximal drawdown   1234.56 (12.34%)'
         """
-        pattern = re.compile(
-            r"Maximal drawdown[^\d]*[\d\s\.,]+\(([\d\.,]+)%\)",
-            re.IGNORECASE,
+        for alias in aliases:
+            pattern = re.compile(
+                re.escape(alias) + r"[^\d]*[\d\s\.,]+\(([\d\.,]+)%\)",
+                re.IGNORECASE,
+            )
+            match = pattern.search(text)
+            if match:
+                return self._to_float(match.group(1))
+            # Fallback: intentar extraer cualquier float tras el alias
+            pattern_fallback = re.compile(
+                re.escape(alias) + r"[^\d\-]*?([\-]?\d[\d\s]*[\.,]?\d*)",
+                re.IGNORECASE,
+            )
+            match_fb = pattern_fallback.search(text)
+            if match_fb:
+                return self._to_float(match_fb.group(1))
+        raise ParserStructureError(
+            f"[MT5HtmlParser] Métrica crítica no encontrada: 'Maximal drawdown'. "
+            f"El informe no contiene ninguna de las etiquetas asociadas: {aliases}"
         )
-        match = pattern.search(text)
-        if match:
-            return self._to_float(match.group(1))
-        # Fallback: intentar extraer cualquier número tras "Maximal drawdown"
-        return self._extract_float(text, "Maximal drawdown")
 
-    def _extract_win_rate(self, text: str) -> float:
+    def _extract_win_rate_from_patterns(self, text: str, patterns: list[str]) -> float:
         """
-        Extrae el Win Rate del campo 'Profit trades (% of total)'.
-        MT5 lo reporta como: 'Profit trades (% of total)   230 (76.67%)'
-        Retorna el valor como decimal (ej. 76.67 → 76.67, NO 0.7667).
-        Usa re.DOTALL para capturar el patrón aunque BeautifulSoup
-        introduzca saltos de línea entre el label y el valor.
+        Extrae el Win Rate utilizando expresiones regulares.
+        Retorna el valor como decimal (ej. 76.67 -> 76.67, NO 0.7667).
         """
-        pattern = re.compile(
-            r"Profit trades[\s\S]*?\((\d+[\.,]\d+)%\)",
-            re.IGNORECASE,
-        )
-        match = pattern.search(text)
-        if match:
-            return self._to_float(match.group(1))
+        for pattern_str in patterns:
+            pattern = re.compile(pattern_str, re.IGNORECASE)
+            match = pattern.search(text)
+            if match:
+                return self._to_float(match.group(1))
         return 0.0
 
     @staticmethod
