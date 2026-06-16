@@ -7,7 +7,7 @@ No ejecuta operaciones.
 No aprueba operativa real.
 No sustituye al RiskEngine.
 """
-
+from core.research.base_research_validator import BaseResearchValidator
 from core.research.research_models import (
     ResearchFinding,
     ResearchFindingSeverity,
@@ -15,7 +15,7 @@ from core.research.research_models import (
 )
 
 
-class OverfittingDetector:
+class OverfittingDetector(BaseResearchValidator):
     """Detecta señales básicas de overfitting en un backtest."""
 
     MIN_TRADES = 100
