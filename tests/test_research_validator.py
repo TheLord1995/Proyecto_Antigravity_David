@@ -16,6 +16,10 @@ def _base_input(**overrides):
         "profit_factor_oos": 1.4,
         "has_in_sample": True,
         "has_out_of_sample": True,
+        "has_walk_forward": True,
+        "walk_forward_windows": 8,
+        "walk_forward_passed_windows": 7,
+        "walk_forward_success_rate": 87.5,
         "has_real_ticks": True,
         "includes_spread": True,
         "includes_commissions": True,
@@ -32,6 +36,7 @@ def test_clean_strategy_is_research_approved():
 
     assert result.status == ResearchStatus.RESEARCH_APPROVED
     assert len(result.findings) == 0
+    assert result.approved_for_real is False
 
 
 def test_missing_oos_is_rejected():
@@ -49,6 +54,16 @@ def test_warning_strategy_needs_review():
 
     result = validator.validate(
         _base_input(total_trades=50)
+    )
+
+    assert result.status == ResearchStatus.NEEDS_REVIEW
+
+
+def test_missing_walk_forward_requires_review():
+    validator = ResearchValidator()
+
+    result = validator.validate(
+        _base_input(has_walk_forward=False)
     )
 
     assert result.status == ResearchStatus.NEEDS_REVIEW

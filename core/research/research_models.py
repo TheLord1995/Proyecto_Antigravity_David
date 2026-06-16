@@ -57,6 +57,9 @@ class ResearchValidationInput(BaseModel):
     has_in_sample: bool = False
     has_out_of_sample: bool = False
     has_walk_forward: bool = False
+    walk_forward_windows: int = Field(default=0, ge=0)
+    walk_forward_passed_windows: int = Field(default=0, ge=0)
+    walk_forward_success_rate: Optional[float] = Field(default=None, ge=0, le=100)
     has_real_ticks: bool = False
     includes_spread: bool = False
     includes_commissions: bool = False

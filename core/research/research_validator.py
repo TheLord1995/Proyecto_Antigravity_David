@@ -1,3 +1,13 @@
+"""
+core/research/research_validator.py
+-----------------------------------
+Orquestador de la capa de investigación cuantitativa.
+
+No ejecuta operaciones.
+No aprueba operativa real.
+No sustituye al RiskEngine.
+"""
+
 from core.research.overfitting_detector import OverfittingDetector
 from core.research.research_models import (
     ResearchFindingSeverity,
@@ -5,6 +15,7 @@ from core.research.research_models import (
     ResearchValidationInput,
     ResearchValidationResult,
 )
+from core.research.walk_forward_validator import WalkForwardValidator
 
 
 class ResearchValidator:
@@ -12,10 +23,18 @@ class ResearchValidator:
 
     def __init__(self):
         self.overfitting_detector = OverfittingDetector()
+        self.walk_forward_validator = WalkForwardValidator()
 
     def validate(self, data: ResearchValidationInput) -> ResearchValidationResult:
         findings = []
-        findings.extend(self.overfitting_detector.analyze(data))
+
+        findings.extend(
+            self.overfitting_detector.analyze(data)
+        )
+
+        findings.extend(
+            self.walk_forward_validator.analyze(data)
+        )
 
         severities = {finding.severity for finding in findings}
 
