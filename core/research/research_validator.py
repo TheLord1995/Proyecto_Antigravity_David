@@ -9,6 +9,7 @@ No sustituye al RiskEngine.
 """
 
 from core.research.overfitting_detector import OverfittingDetector
+from core.research.regime_detector import RegimeDetector
 from core.research.research_models import (
     ResearchFindingSeverity,
     ResearchStatus,
@@ -24,6 +25,7 @@ class ResearchValidator:
     def __init__(self):
         self.overfitting_detector = OverfittingDetector()
         self.walk_forward_validator = WalkForwardValidator()
+        self.regime_detector = RegimeDetector()
 
     def validate(self, data: ResearchValidationInput) -> ResearchValidationResult:
         findings = []
@@ -35,6 +37,11 @@ class ResearchValidator:
         findings.extend(
             self.walk_forward_validator.analyze(data)
         )
+
+        if data.tested_regimes:
+            findings.extend(
+                self.regime_detector.analyze(data)
+            )
 
         severities = {finding.severity for finding in findings}
 
