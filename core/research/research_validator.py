@@ -16,6 +16,7 @@ from core.research.research_models import (
     ResearchValidationInput,
     ResearchValidationResult,
 )
+from core.research.stress_tester import StressTester
 from core.research.walk_forward_validator import WalkForwardValidator
 
 
@@ -26,6 +27,7 @@ class ResearchValidator:
         self.overfitting_detector = OverfittingDetector()
         self.walk_forward_validator = WalkForwardValidator()
         self.regime_detector = RegimeDetector()
+        self.stress_tester = StressTester()
 
     def validate(self, data: ResearchValidationInput) -> ResearchValidationResult:
         findings = []
@@ -39,9 +41,19 @@ class ResearchValidator:
         )
 
         if data.tested_regimes:
+            regime_findings = self.regime_detector.analyze(data)
             findings.extend(
-                self.regime_detector.analyze(data)
+                finding
+                for finding in regime_findings
+                if finding.severity != ResearchFindingSeverity.INFO
             )
+
+        stress_findings = self.stress_tester.analyze(data)
+        findings.extend(
+            finding
+            for finding in stress_findings
+            if finding.severity != ResearchFindingSeverity.INFO
+        )
 
         severities = {finding.severity for finding in findings}
 
