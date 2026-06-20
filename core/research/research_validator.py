@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from core.research.base_research_validator import BaseResearchValidator
 from core.research.overfitting_detector import OverfittingDetector
+from core.research.regime_detector import RegimeDetector
 from core.research.regime_performance_analyzer import RegimePerformanceAnalyzer
 from core.research.research_models import (
     ResearchFinding,
@@ -24,6 +25,8 @@ from core.research.research_models import (
     ResearchValidationInput,
     ResearchValidationResult,
 )
+from core.research.stress_tester import StressTester
+from core.research.walk_forward_validator import WalkForwardValidator
 
 
 class ResearchValidator(BaseResearchValidator):
@@ -32,8 +35,10 @@ class ResearchValidator(BaseResearchValidator):
 
     Integra validaciones independientes:
     - OverfittingDetector
+    - WalkForwardValidator
+    - RegimeDetector
     - RegimePerformanceAnalyzer
-    - Comprobaciones propias del orquestador (walk-forward, etc.)
+    - StressTester
 
     Criterio de resolución de estado:
     - Algún finding CRITICAL  → REJECTED
@@ -43,7 +48,10 @@ class ResearchValidator(BaseResearchValidator):
 
     def __init__(self) -> None:
         self.overfitting_detector = OverfittingDetector()
+        self.walk_forward_validator = WalkForwardValidator()
+        self.regime_detector = RegimeDetector()
         self.regime_performance_analyzer = RegimePerformanceAnalyzer()
+        self.stress_tester = StressTester()
 
     # ── Contrato BaseResearchValidator ───────────────────────────────
 
@@ -52,8 +60,7 @@ class ResearchValidator(BaseResearchValidator):
         data: ResearchValidationInput,
     ) -> list[ResearchFinding]:
         """
-        Recopila hallazgos de todos los sub-validadores
-        y añade las comprobaciones propias del orquestador.
+        Recopila hallazgos de todos los sub-validadores.
 
         Devuelve solo los findings accionables (CRITICAL / WARNING).
         Los findings INFO se descartan a nivel de orquestación.
@@ -62,24 +69,15 @@ class ResearchValidator(BaseResearchValidator):
 
         # ── Sub-validadores ──────────────────────────────────────────
         findings.extend(self.overfitting_detector.analyze(data))
+        findings.extend(self.walk_forward_validator.analyze(data))
+        findings.extend(self.regime_detector.analyze(data))
+        findings.extend(self.stress_tester.analyze(data))
 
         # Solo ejecutar el analizador de regímenes si hay datos de régimen
         # declarados en metadata.  Si no existen, no es un problema
         # accionable: simplemente no hay datos que analizar.
         if data.metadata.get(RegimePerformanceAnalyzer.METADATA_KEY):
             findings.extend(self.regime_performance_analyzer.analyze(data))
-
-        # ── Comprobaciones propias del orquestador ───────────────────
-        if not data.has_walk_forward:
-            findings.append(
-                ResearchFinding(
-                    code="NO_WALK_FORWARD",
-                    severity=ResearchFindingSeverity.WARNING,
-                    component="orchestrator",
-                    message="La estrategia no incluye validación Walk-Forward.",
-                    evidence={"has_walk_forward": data.has_walk_forward},
-                )
-            )
 
         # Filtrar: solo devolver findings accionables (CRITICAL / WARNING)
         return [

@@ -4,10 +4,11 @@ Tests del MarketRegimeDetector.
 Valida detección automática de régimen desde velas OHLCV.
 """
 
+import pytest
 from copy import deepcopy
 
 from core.research.market_regime_detector import MarketRegimeDetector
-from core.research.market_regime_models import MarketRegime, OHLCVRecord
+from core.research.market_regime_models import MarketRegime, MarketRegimeResult, OHLCVRecord
 
 
 def build_trending_candles(count: int = 40) -> list[OHLCVRecord]:
@@ -105,8 +106,8 @@ def test_detects_trending_market():
     result = detector.detect(candles)
 
     assert result.regime == MarketRegime.TRENDING
-    assert result.adx is not None
-    assert result.adx >= detector.ADX_TRENDING_THRESHOLD
+    assert result.trend_efficiency is not None
+    assert result.trend_efficiency >= detector.TREND_EFFICIENCY_TRENDING_THRESHOLD
     assert result.approved_for_real is False
 
 
@@ -117,8 +118,8 @@ def test_detects_ranging_market():
     result = detector.detect(candles)
 
     assert result.regime == MarketRegime.RANGING
-    assert result.adx is not None
-    assert result.adx < detector.ADX_RANGING_THRESHOLD
+    assert result.trend_efficiency is not None
+    assert result.trend_efficiency < detector.TREND_EFFICIENCY_RANGING_THRESHOLD
     assert result.approved_for_real is False
 
 
@@ -151,3 +152,19 @@ def test_detector_does_not_mutate_input():
     detector.detect(candles)
 
     assert candles == original
+
+
+def test_model_validator_rejects_approved_for_real_true():
+    """Verifica que MarketRegimeResult lanza ValueError si approved_for_real=True."""
+    with pytest.raises(ValueError, match="nunca puede aprobar ejecución real"):
+        MarketRegimeResult(
+            regime=MarketRegime.TRENDING,
+            confidence=0.80,
+            trend_efficiency=50.0,
+            atr=1.5,
+            atr_pct=1.0,
+            volatility_pct=0.8,
+            candles_analyzed=40,
+            reason="Test de seguridad.",
+            approved_for_real=True,
+        )
