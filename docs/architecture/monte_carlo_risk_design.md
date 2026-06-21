@@ -56,7 +56,7 @@ MT5 HTML Report
      ▼
 ┌─────────────────────────────┐
 │ BacktestValidator           │  Clasifica la estrategia:
-│                             │  REJECTED / OBSERVATION / PAPER_TRADING_READY
+│                             │  REJECTED / OBSERVATION / RESEARCH_APPROVED
 │                             │  No calcula. No simula. No lee archivos.
 └─────────────────────────────┘
      │ StrategyEvaluation
@@ -288,10 +288,10 @@ Cuando se autorice la integración, los umbrales orientativos propuestos son:
 | Condición Monte Carlo | Impacto en clasificación |
 |:---|:---|
 | `risk_of_ruin_pct > 0.30` | Fuerza `REJECTED` independientemente de las demás métricas. |
-| `0.10 < risk_of_ruin_pct ≤ 0.30` | Degrada a `OBSERVATION` si la clasificación previa era `PAPER_TRADING_READY`. |
+| `0.10 < risk_of_ruin_pct ≤ 0.30` | Degrada a `OBSERVATION` si la clasificación previa era `RESEARCH_APPROVED`. |
 | `monte_carlo_max_drawdown_p95 > max_drawdown_threshold` | Añade nota de `OBSERVATION`. |
 | `risk_of_ruin_pct ≤ 0.10` y `monte_carlo_max_drawdown_p95 ≤ threshold` | No modifica la clasificación positiva. |
-| `low_confidence = True` (muestra insuficiente) | Bloquea `PAPER_TRADING_READY`, fuerza mínimo `OBSERVATION`. |
+| `low_confidence = True` (muestra insuficiente) | Bloquea `RESEARCH_APPROVED`, fuerza mínimo `OBSERVATION`. |
 
 **Nota de diseño:** Estos umbrales son orientativos y requieren aprobación del Director Técnico antes de cualquier implementación en el `BacktestValidator`.
 
@@ -322,7 +322,7 @@ Todos los tests residen en `tests/test_monte_carlo.py` y siguen las convenciones
 
 | Riesgo | Descripción | Mitigación |
 |:---|:---|:---|
-| **Falsa precisión estadística** | Con pocos trades, los percentiles calculados carecen de significado estadístico real. El resultado puede aparentar certeza que no existe. | Flag `low_confidence`, advertencia explícita en metadata y bloqueo para `PAPER_TRADING_READY`. |
+| **Falsa precisión estadística** | Con pocos trades, los percentiles calculados carecen de significado estadístico real. El resultado puede aparentar certeza que no existe. | Flag `low_confidence`, advertencia explícita en metadata y bloqueo para `RESEARCH_APPROVED`. |
 | **Muestra pequeña** | Backtests cortos (< 30 trades) generan distribuciones bootstrap no representativas. | `min_trades_recommended = 30`. Excepción dura en < 10. |
 | **Distribución no estacionaria** | Los trades del backtest pueden provenir de regímenes de mercado diferentes (alta volatilidad, baja volatilidad, tendencia, rango). El bootstrap asume que todos son igualmente probables en el futuro. | Documentar explícitamente esta limitación en el output (`low_confidence` no la cubre, es una advertencia separada). Futura Fase: análisis por régimen. |
 | **Bootstrap excesivamente optimista** | Si los trades con mejores resultados son pocos y representan eventos extraordinarios, el bootstrap los remuestrea con la misma probabilidad que el resto. | Considerar el shuffle como alternativa conservadora. Documentar en el diseño. |
@@ -375,7 +375,7 @@ Las siguientes decisiones requieren aprobación del Director Técnico antes de i
 | D1 | **Librería de aleatoriedad** | `random` stdlib (sin dependencias nuevas) vs `numpy.random` (más eficiente para n_simulations grandes). Recomendación: `numpy.random.default_rng(seed)` para evitar estado global. |
 | D2 | **Localización del `MonteCarloResult`** | Dentro de `core/strategy_models.py` (junto al resto) vs archivo propio `core/metrics/monte_carlo_models.py`. |
 | D3 | **Umbral de ruina por defecto** | `0.30` (30%) propuesto. ¿Se acepta o se modifica a `0.20` o `0.50`? |
-| D4 | **Comportamiento con `low_confidence`** | ¿El BacktestValidator debe bloquear automáticamente `PAPER_TRADING_READY` si `low_confidence=True` aunque no se haya actualizado el validador? ¿O solo advertencia? |
+| D4 | **Comportamiento con `low_confidence`** | ¿El BacktestValidator debe bloquear automáticamente `RESEARCH_APPROVED` si `low_confidence=True` aunque no se haya actualizado el validador? ¿O solo advertencia? |
 | D5 | **Número de decimales en percentiles** | Precisión de los percentiles calculados: `float` con 4 decimales o `Decimal` para reproducibilidad estricta. Recomendación: `float` + `round(..., 4)`. |
 | D6 | **Test de rendimiento** | ¿Se incluye un test de tiempo de ejecución (`< 5 segundos` para `n_simulations=1000, n_trades=200`)? |
 

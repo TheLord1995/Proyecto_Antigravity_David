@@ -92,7 +92,7 @@ MT5 HTML Report (Reporte nativo)
         │
   ┌─────┴────────────────────────────────────────┐
   ▼                                              ▼
-[REJECTED / OBSERVATION]             [PAPER_TRADING_READY]
+[REJECTED / OBSERVATION]             [RESEARCH_APPROVED]
 (No cumple criterios mínimos)         (Listo para Sandbox)
 ```
 
@@ -100,7 +100,7 @@ MT5 HTML Report (Reporte nativo)
 2. **MT5HtmlParser**: Lee el documento, procesa sus tablas y secciones, calcula el hash SHA-256 de trazabilidad del archivo para evitar alteraciones posteriores y mapea los datos financieros a tipos nativos de Python.
 3. **BacktestReport**: Estructura de datos normalizada con tipos de datos e información consistente.
 4. **BacktestValidator**: Verifica si el backtest cumple los umbrales de seguridad y métricas aceptables (ej. profit factor mínimo, histórico suficiente de operaciones, pérdidas controladas).
-5. **StrategyEvaluation**: Determina el veredicto final de validación académica (`REJECTED`, `OBSERVATION` o `PAPER_TRADING_READY`).
+5. **StrategyEvaluation**: Determina el veredicto final de validación académica (`REJECTED`, `OBSERVATION` o `RESEARCH_APPROVED`).
 
 ---
 
@@ -113,7 +113,7 @@ Recursos visuales preparados para la defensa académica y la demo funcional del 
 | **Infografía del Proyecto** | Visión general de la arquitectura, el pipeline, invariantes de seguridad y roadmap. | [antigravity_infografia-V1.html](docs/Presentacion/antigravity_infografia-V1.html) |
 | **Dashboard de Validación** | Consola de resultados del pipeline completo: métricas, Monte Carlo, BacktestValidator y RiskEngine. | [antigravity_dashboard_demo-V1.html](docs/Presentacion/antigravity_dashboard_demo-V1.html) |
 
-> 💡 Ambos archivos son páginas HTML estáticas que se abren directamente en el navegador sin servidor local ni dependencias externas. Reflejan el estado de la **Fase 4.4 completada** con **117 tests passing**, `ALLOW_REAL_EXECUTION=False` y `approved_for_real=False`.
+> 💡 Ambos archivos son páginas HTML estáticas que se abren directamente en el navegador sin servidor local ni dependencias externas. Reflejan el estado de la **Fase 4.4 completada** con **121 tests passing**, `ALLOW_REAL_EXECUTION=False` y `approved_for_real=False`.
 
 ---
 
@@ -202,7 +202,7 @@ Debería devolver:
 
 ## 🧪 Ejecutar Tests
 
-El proyecto cuenta con una batería global de **117 tests unitarios y de integración** con un resultado consolidado de **0 fallos** (100% éxito).
+El proyecto cuenta con una batería global de **121 tests unitarios y de integración** con un resultado consolidado de **0 fallos** (100% éxito).
 
 Para ejecutar la batería completa de tests usando `pytest`:
 

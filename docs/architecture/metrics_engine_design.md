@@ -36,7 +36,7 @@ El motor procesará la secuencia cronológica de operaciones cerradas y calcular
 Para mantener la cohesión y mitigar riesgos arquitectónicos, el Metrics Engine tiene prohibido:
 * ❌ **No leer archivos físicos:** No debe abrir HTML, CSV o JSON. Recibe listas de datos ya tipados y estructurados.
 * ❌ **No parsear informes MT5:** No conoce la estructura tabular de MetaTrader 5.
-* ❌ **No decidir clasificación final ni integrarse con el validador:** No decide si un backtest es `REJECTED`, `OBSERVATION` o `PAPER_TRADING_READY`. Esta versión de la Fase 4.2A no interfiere ni modifica el comportamiento del `BacktestValidator` actual.
+* ❌ **No decidir clasificación final ni integrarse con el validador:** No decide si un backtest es `REJECTED`, `OBSERVATION` o `RESEARCH_APPROVED`. Esta versión de la Fase 4.2A no interfiere ni modifica el comportamiento del validador actual.
 * ❌ **No modificar esquemas persistidos o base de datos en exceso:** Se evitará la modificación profunda del `BacktestReport` para no romper la compatibilidad regresiva del core ni de los tests existentes de la Fase 4.1.
 * ❌ **No usar Monte Carlo ni Risk of Ruin:** Quedan totalmente excluidos de esta Fase 4.2A por ser estocásticos y de complejidad adicional.
 * ❌ **No conectarse a internet o APIs externas:** El motor es 100% offline y determinista local.

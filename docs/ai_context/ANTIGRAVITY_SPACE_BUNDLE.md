@@ -49,13 +49,13 @@ El ecosistema cuenta con los siguientes módulos completamente funcionales y val
 13. **Monte Carlo & Risk of Ruin:** Motor de simulaciones estadísticas de remuestreo y cálculo de la probabilidad de ruina en base a rachas.
 14. **AI Validator Design & Contracts:** Especificación de la arquitectura por adaptadores del AI Validator, con modelos Pydantic (`AIValidatorInput`, `AIValidatorResult`) y la implementación base offline `MockAIValidator`.
 15. **GitHub y control de versiones:** Repositorio limpio estructurado por módulos aislados.
-16. **pytest:** Suite de pruebas unitarias y de integración automatizadas (117 tests auditados y pasando 100%).
+16. **pytest:** Suite de pruebas unitarias y de integración automatizadas (121 tests auditados y pasando 100%).
 
 ---
 
 ## 4. Última Batería de Tests Conocida
 
-* **Resultado:** `117 tests pasados / 0 fallados` de manera exitosa ejecutando `.venv\Scripts\pytest tests/ -v`.
+* **Resultado:** `121 tests pasados / 0 fallados` de manera exitosa ejecutando `.venv\Scripts\pytest tests/ -v`.
 * **Advertencias (Warnings):** 14 warnings no bloqueantes por la depreciación de `datetime.utcnow()` en validaciones internas de paquetes de dependencias de Pydantic.
 * **Clasificación:** Catalogado como deuda técnica menor; pendiente de resolución al migrar a objetos datetime conscientes del huso horario (`datetime.now(datetime.UTC)`) en la próxima actualización de dependencias de Pydantic.
 
@@ -156,7 +156,7 @@ El pipeline de ingesta, cálculo, validación y control de señales sigue un flu
 * **Metrics Engine:** Componente determinista aislado que procesa la lista de transacciones del parser para verificar, corregir y calcular métricas cuantitativas clave de la estrategia sin intervención humana o dependencias de APIs.
 * **Monte Carlo:** Proceso de simulación estocástica que realiza miles de iteraciones reordenando (Shuffle) o remuestreando con reemplazo (Bootstrap) la lista de operaciones históricas para evaluar la robustez estadística de los Drawdowns y rachas.
 * **Risk of Ruin:** Medida de probabilidad estadística derivada de la simulación de Monte Carlo que calcula el riesgo de que la cuenta caiga por debajo de un nivel catastrófico definido de capital antes de alcanzar la rentabilidad esperada.
-* **BacktestValidator:** Evaluador lógico encargado de comparar el informe enriquecido (`BacktestReport`) contra las reglas de aceptación y umbrales académicos. Asigna clasificaciones como `PAPER_TRADING_READY`, `OBSERVATION` o `REJECTED`.
+* **BacktestValidator / ResearchValidator:** Evaluador lógico encargado de comparar el informe enriquecido (`BacktestReport`) contra las reglas de aceptación y umbrales académicos. Asigna clasificaciones como `RESEARCH_APPROVED`, `OBSERVATION` o `REJECTED`.
 * **RiskEngine:** Módulo crítico y determinista de seguridad en tiempo real. Actúa en el pipeline final evaluando señales en base a parámetros del entorno (seguridad real bloqueada, autorización manual activa, pérdidas acumuladas diarias y exposición de margen).
 * **Approval Layer:** Capa de interacción y visualización final para el operador. En ella se unifican las decisiones del `RiskEngine`, del `BacktestValidator` y los comentarios del `AI Validator`. Presenta un resumen para la aprobación manual definitiva del humano.
 * **AI Validator:** Capa de análisis y razonamiento auxiliar construida con modelos LLM mediante arquitectura de adaptadores. Su función es evaluar la coherencia técnica del contexto de la señal y generar informes explicativos legibles.

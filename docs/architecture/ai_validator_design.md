@@ -172,7 +172,7 @@ marcados como `Requerido` deben estar presentes; los `Opcionales` serán declara
 | `risk_reward_ratio` | `float \| null` | ❌ | Ratio R:R calculado. Si es `null`, la IA debe calcularlo o declarar ausencia. |
 | `technical_justification` | `str \| null` | ❌ | Texto libre con la justificación técnica del analista o del sistema. Puede ser `null` si no se provee. |
 | `strategy_context` | `str \| null` | ❌ | Nombre o descripción de la estrategia de origen (e.g., `"ORB_H1_v2"`). |
-| `strategy_classification` | `str \| null` | ❌ | Estado de validación de la estrategia: `"PAPER_TRADING_READY"`, `"OBSERVATION"`, etc. |
+| `strategy_classification` | `str \| null` | ❌ | Estado de validación de la estrategia: `"RESEARCH_APPROVED"`, `"OBSERVATION"`, etc. |
 | `calculated_metrics_summary` | `dict \| null` | ❌ | Resumen de métricas recientes si existen: `profit_factor`, `win_rate`, `max_drawdown_pct`, `expectancy`. |
 | `monte_carlo_summary` | `dict \| null` | ❌ | Resumen de Monte Carlo si existe: `risk_of_ruin_pct`, `low_confidence`, `monte_carlo_max_drawdown_p95`. |
 | `account_risk_context` | `dict \| null` | ❌ | Información de riesgo relevante: `daily_loss_pct_used`, `open_trades_count`, `available_margin_pct`. |

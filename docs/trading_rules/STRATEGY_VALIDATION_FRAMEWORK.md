@@ -234,7 +234,8 @@ El Ecosistema central asigna a cada bot uno de los siguientes estados inmutables
 
 * **`REJECTED` (Rechazada)**: No cumple los umbrales mínimos iniciales, presenta sesgos detectados o muestra una degradación severa irreversible. Desconectada y bloqueada permanentemente.
 * **`OBSERVATION` (En Observación)**: Estrategias en evaluación de degradación, rediseño técnico menor o en espera de recabar mayor volumen de transacciones reales.
-* **`PAPER_TRADING_READY` (Lista para Simulación)**: Aprobada en backtest teórico IS/OOS y libre de sesgos. Autorizada exclusivamente para el entorno de simulación local.
+* **`RESEARCH_APPROVED` (Aprobación Cuantitativa)**: Aprobada matemáticamente en el ResearchValidator (libre de sesgos, umbrales OK). Aún no autorizada para operar.
+* **`PAPER_TRADING_READY` (Lista para Simulación)**: Estrategia con estado RESEARCH_APPROVED que ha recibido la autorización final en la futura Approval Layer. Autorizada exclusivamente para el entorno de simulación local.
 * **`APPROVED_FOR_DEMO` (Aprobada para Demo)**: Estrategia validada y autorizada para el enrutamiento de señales en cuentas **Demo de MetaTrader 5**, bajo la mediación estricta de la Capa de Aprobación.
 * **`BLOCKED_FOR_REAL` (Bloqueada para Real)**: **Bloqueo y candado de seguridad absoluto por diseño académico.** Ninguna estrategia está autorizada para emitir ejecuciones a cuentas de corretaje reales.
 
@@ -326,7 +327,7 @@ Toda estrategia candidata debe registrar y completar esta plantilla antes de ser
 - [ ] **Ejecución Realista**: Los trades duran lo suficiente para no depender de microsegundos de latencia.
 
 ## 7. Dictamen y Firma del Arquitecto
-* **Decisión Final**: `REJECTED | OBSERVATION | PAPER_TRADING_READY`
+* **Decisión Final**: `REJECTED | OBSERVATION | RESEARCH_APPROVED`
 * **Notas del Arquitecto**: `[Escribe notas y recomendaciones de robustez]`
 ```
 

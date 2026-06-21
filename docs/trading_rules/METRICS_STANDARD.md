@@ -13,7 +13,7 @@
 
 Las métricas cuantitativas representan la base operativa del ecosistema de validación de Antigravity. La función de este estándar es actuar como un **filtro matemático infranqueable** para impedir que estrategias aparentemente rentables en el backtest, pero estructuralmente frágiles, inestables o sobreoptimizadas, entren en el pipeline en vivo de simulación del Core. 
 
-Toda métrica descrita aquí debe ser calculada de manera homogénea antes de permitir que cualquier bot o estrategia sea clasificada como `OBSERVATION`, `PAPER_TRADING_READY` o `APPROVED_FOR_DEMO`.
+Toda métrica descrita aquí debe ser calculada de manera homogénea antes de permitir que cualquier bot o estrategia sea clasificada como `OBSERVATION`, `RESEARCH_APPROVED` o `APPROVED_FOR_DEMO`.
 
 ---
 
@@ -271,11 +271,11 @@ Clasificamos el desempeño de las estrategias en 4 bandas discretas de viabilida
    * Todos los umbrales de la Sección 6 son ampliamente superados.
    * La consistencia temporal (linealidad) es elevada.
    * El decaimiento de métricas de IS a OOS es inferior al **10%**.
-   * Calificación: `PAPER_TRADING_READY` (autorizada de inmediato para simulación en vivo).
+   * Calificación: `RESEARCH_APPROVED` (aprobada cuantitativamente, pendiente de Approval Layer para paper trading).
 2. **ACEPTABLE**:
    * Cumple de manera holgada con los umbrales mínimos establecidos.
    * La robustez en OOS y significancia estadística está validada.
-   * Calificación: `PAPER_TRADING_READY` o `OBSERVATION` bajo monitoreo preventivo.
+   * Calificación: `RESEARCH_APPROVED` o `OBSERVATION` bajo monitoreo preventivo.
 3. **DUDOSO**:
    * Algún umbral crítico (e.g. Recovery Factor o Sharpe Ratio) no se cumple en OOS, o la muestra de operaciones es demasiado ajustada ($100 < N < 150$).
    * Calificación: `OBSERVATION` (bloqueada para pruebas en vivo, en observación preventiva).
@@ -375,7 +375,7 @@ Para trasladar este estándar a código ejecutable en las siguientes iteraciones
   * Ganancia Media: $+120$ puntos | Pérdida Media: $-40$ puntos.
   * Win/Loss Ratio: $3.0$ | Max Drawdown: $7.2\%$.
   * Recovery Factor: $4.5$.
-* **Dictamen**: **`PAPER_TRADING_READY`**. A pesar de un winrate bajo, la sólida asimetría positiva ($3:1$) y el estricto control de pérdidas garantizan una esperanza matemática y una recuperación sobresalientes, con drawdowns muy controlados.
+* **Dictamen**: **`RESEARCH_APPROVED`**. A pesar de un winrate bajo, la sólida asimetría positiva ($3:1$) y el estricto control de pérdidas garantizan una esperanza matemática y una recuperación sobresalientes, con drawdowns muy controlados.
 
 ---
 

@@ -21,11 +21,11 @@ Se evalúa la solidez estadística de los datos históricos.
 2. Se calcula la probabilidad de ruina (`Risk of Ruin`).
 3. Si el percentil 95 del drawdown simulado excede el riesgo permitido, se marca `low_confidence = True`.
 
-## Paso 4: Evaluación Lógica (BacktestValidator)
+## Paso 4: Evaluación Lógica (BacktestValidator / ResearchValidator)
 Se aplican criterios académicos y umbrales al reporte.
 1. Si el Profit Factor < 1.2, se rechaza.
 2. Si `low_confidence == True` (Regla D4), la estrategia máxima que puede obtener es `OBSERVATION`.
-3. Si pasa todos los filtros, obtiene el estado `PAPER_TRADING_READY`.
+3. Si pasa todos los filtros cuantitativos, obtiene el estado `RESEARCH_APPROVED`. La transición a `PAPER_TRADING_READY` queda reservada para la futura Approval Layer.
 
 ## Paso 5: Validación Contextual de Señal (AI Validator - Fase 4.4)
 *(Simulado durante esta entrega académica mediante MockAIValidator)*
